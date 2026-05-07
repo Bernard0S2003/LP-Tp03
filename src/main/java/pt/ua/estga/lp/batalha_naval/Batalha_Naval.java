@@ -1,6 +1,7 @@
 package pt.ua.estga.lp.batalha_naval;
 
 import pt.ua.estga.lp.batalha_naval.network.BattleshipServer;
+import pt.ua.estga.lp.batalha_naval.network.BattleshipClient;
 import pt.ua.estga.lp.batalha_naval.view.CLIView;
 import pt.ua.estga.lp.batalha_naval.view.GUIView;
 
