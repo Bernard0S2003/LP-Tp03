@@ -11,6 +11,7 @@ public class Player implements Serializable {
     private int id;
     private String name;
     private Board myBoard;
+    private boolean isReady = false;
     
     // Matriz simplificada para guardar os tiros que o jogador já efetuou
     private Cell.CellState[][] opponentBoardView;
@@ -42,6 +43,14 @@ public class Player implements Serializable {
 
     public Board getMyBoard() {
         return myBoard;
+    }
+
+    public boolean isReady() {
+        return isReady;
+    }
+
+    public void setReady(boolean ready) {
+        isReady = ready;
     }
 
     public Cell.CellState[][] getOpponentBoardView() {

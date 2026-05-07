@@ -19,6 +19,7 @@ public class Protocol {
     public static final String TURN = "TURN";             // TURN <ID_Jogador_Atual> <Tiros_Restantes>
     public static final String SHOT_RES = "SHOT_RESULT";  // SHOT_RESULT <PlayerID> <X> <Y> <RESULT> [INFO]
     public static final String BOARD_UP = "BOARD_UPDATE"; // BOARD_UPDATE <JSON>
+    public static final String RESTORE = "RESTORE_STATE"; // RESTORE_STATE <MyBoardFormatado> <OppBoardFormatado>
     public static final String GAME_OVER = "GAME_OVER";   // GAME_OVER <VencedorID>
     public static final String SAVED = "SAVED";           // SAVED <GameID>
     public static final String ERROR = "ERROR";           // ERROR <Mensagem>

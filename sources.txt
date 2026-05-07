@@ -1,0 +1,17 @@
+C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\Batalha_Naval.java
+C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\Storage.java
+C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\model\Board.java
+C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\model\Cell.java
+C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\model\GameState.java
+C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\model\Player.java
+C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\model\Ship.java
+C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\model\ShipType.java
+C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\network\BattleshipClient.java
+C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\network\BattleshipServer.java
+C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\network\ClientHandler.java
+C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\network\GameSession.java
+C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\network\Protocol.java
+C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\util\Storage.java
+C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\view\CLIView.java
+C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\view\GameView.java
+C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\view\GUIView.java

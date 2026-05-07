@@ -18,6 +18,15 @@ public class GUIView extends JFrame implements GameView {
     private boolean isMyTurn = false;
     private int shotsLeft = 0;
 
+    // Estado da colocação de barcos
+    private int[] shipsToPlace = {5, 4, 3, 3, 2, 2, 2, 1, 1, 1, 1};
+    private int currentShipIndex = 0;
+    private boolean horizontalPlacement = true;
+    private JPanel[][] myCells;
+    private boolean[][] localOccupied = new boolean[Board.SIZE][Board.SIZE];
+    private boolean isPlacingPhase = false;
+    private StringBuilder placementString = new StringBuilder();
+
     public GUIView() {
         setTitle("Batalha Naval");
         setSize(800, 500);
@@ -32,7 +41,7 @@ public class GUIView extends JFrame implements GameView {
         
         // Tabuleiro do adversário (Onde disparamos)
         JPanel opponentBoard = new JPanel(new GridLayout(Board.SIZE, Board.SIZE));
-        opponentBoard.setBorder(BorderFactory.createTitledBorder("Tabuleiro do Adversário (Clica aqui para atirar)"));
+        opponentBoard.setBorder(BorderFactory.createTitledBorder("Tabuleiro do Adversário"));
         opponentButtons = new JButton[Board.SIZE][Board.SIZE];
 
         for (int i = 0; i < Board.SIZE; i++) {
@@ -50,11 +59,36 @@ public class GUIView extends JFrame implements GameView {
         // Nosso Tabuleiro
         myBoardPanel = new JPanel(new GridLayout(Board.SIZE, Board.SIZE));
         myBoardPanel.setBorder(BorderFactory.createTitledBorder("Teu Tabuleiro"));
-        for (int i = 0; i < Board.SIZE * Board.SIZE; i++) {
-            JPanel cellPanel = new JPanel();
-            cellPanel.setBackground(Color.CYAN);
-            cellPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-            myBoardPanel.add(cellPanel);
+        myCells = new JPanel[Board.SIZE][Board.SIZE];
+        for (int i = 0; i < Board.SIZE; i++) {
+            for (int j = 0; j < Board.SIZE; j++) {
+                JPanel cellPanel = new JPanel();
+                cellPanel.setBackground(Color.CYAN);
+                cellPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+                int r = i, c = j;
+                cellPanel.addMouseListener(new java.awt.event.MouseAdapter() {
+                    public void mouseEntered(java.awt.event.MouseEvent e) {
+                        if (!isPlacingPhase) return;
+                        drawPreview(r, c, true);
+                    }
+                    public void mouseExited(java.awt.event.MouseEvent e) {
+                        if (!isPlacingPhase) return;
+                        drawPreview(r, c, false);
+                    }
+                    public void mousePressed(java.awt.event.MouseEvent e) {
+                        if (!isPlacingPhase) return;
+                        if (SwingUtilities.isRightMouseButton(e)) {
+                            drawPreview(r, c, false);
+                            horizontalPlacement = !horizontalPlacement;
+                            drawPreview(r, c, true);
+                        } else if (SwingUtilities.isLeftMouseButton(e)) {
+                            placeShipAt(r, c);
+                        }
+                    }
+                });
+                myCells[i][j] = cellPanel;
+                myBoardPanel.add(cellPanel);
+            }
         }
 
         boardsPanel.add(myBoardPanel);
@@ -69,6 +103,59 @@ public class GUIView extends JFrame implements GameView {
         });
         topPanel.add(btnSave);
         add(topPanel, BorderLayout.NORTH);
+    }
+
+    private void drawPreview(int r, int c, boolean show) {
+        if (currentShipIndex >= shipsToPlace.length) return;
+        int size = shipsToPlace[currentShipIndex];
+        boolean valid = canPlaceLocal(size, r, c, horizontalPlacement);
+        Color color = valid ? Color.GREEN : Color.RED;
+        
+        for (int i = 0; i < size; i++) {
+            int dr = horizontalPlacement ? r : r + i;
+            int dc = horizontalPlacement ? c + i : c;
+            if (dr < Board.SIZE && dc < Board.SIZE) {
+                if (!localOccupied[dr][dc]) {
+                    myCells[dr][dc].setBackground(show ? color : Color.CYAN);
+                }
+            }
+        }
+    }
+
+    private boolean canPlaceLocal(int size, int r, int c, boolean horiz) {
+        if (horiz) {
+            if (c + size > Board.SIZE) return false;
+            for (int i = 0; i < size; i++) if (localOccupied[r][c + i]) return false;
+        } else {
+            if (r + size > Board.SIZE) return false;
+            for (int i = 0; i < size; i++) if (localOccupied[r + i][c]) return false;
+        }
+        return true;
+    }
+
+    private void placeShipAt(int r, int c) {
+        if (currentShipIndex >= shipsToPlace.length) return;
+        int size = shipsToPlace[currentShipIndex];
+        if (!canPlaceLocal(size, r, c, horizontalPlacement)) return;
+
+        for (int i = 0; i < size; i++) {
+            int dr = horizontalPlacement ? r : r + i;
+            int dc = horizontalPlacement ? c + i : c;
+            localOccupied[dr][dc] = true;
+            myCells[dr][dc].setBackground(Color.DARK_GRAY);
+        }
+        
+        if (placementString.length() > 0) placementString.append(",");
+        placementString.append(size).append(" ").append(r).append(" ").append(c).append(" ").append(horizontalPlacement ? "H" : "V");
+
+        currentShipIndex++;
+        if (currentShipIndex >= shipsToPlace.length) {
+            isPlacingPhase = false;
+            showMessage("Todos os navios colocados! A enviar para o servidor...");
+            client.sendPlacement(placementString.toString());
+        } else {
+            showMessage("Coloque o navio (" + shipsToPlace[currentShipIndex] + " casas). Botão Direito para rodar.");
+        }
     }
 
     public void start(String ip, int port) {
@@ -119,7 +206,23 @@ public class GUIView extends JFrame implements GameView {
 
     @Override
     public void updateMyBoard(Cell[][] grid) {
-        // Implementação omitida por brevidade (desenharia os barcos no myBoardPanel)
+        SwingUtilities.invokeLater(() -> {
+            for (int i = 0; i < Board.SIZE; i++) {
+                for (int j = 0; j < Board.SIZE; j++) {
+                    Cell.CellState st = grid[i][j].getState();
+                    if (st == Cell.CellState.SHIP) {
+                        myCells[i][j].setBackground(Color.DARK_GRAY);
+                        localOccupied[i][j] = true;
+                    } else if (st == Cell.CellState.HIT || st == Cell.CellState.SUNK) {
+                        myCells[i][j].setBackground(Color.RED);
+                    } else if (st == Cell.CellState.MISS) {
+                        myCells[i][j].setBackground(Color.BLUE);
+                    } else {
+                        myCells[i][j].setBackground(Color.CYAN);
+                    }
+                }
+            }
+        });
     }
 
     @Override
@@ -166,7 +269,8 @@ public class GUIView extends JFrame implements GameView {
 
     @Override
     public void requestShipPlacement() {
-        showMessage("Servidor pediu a colocação de navios... Enviando posicionamento automático.");
-        client.sendPlacement("AUTO_OK");
+        this.isPlacingPhase = true;
+        showMessage("Início do Jogo! Coloque os seus navios no Tabuleiro da esquerda.");
+        showMessage("Navio atual: " + shipsToPlace[currentShipIndex] + " casas. (CLIQUE DIREITO = Rodar)");
     }
 }

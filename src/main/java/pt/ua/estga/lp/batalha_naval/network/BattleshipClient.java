@@ -146,6 +146,30 @@ public class BattleshipClient {
                         view.updateMyBoard(myLocalGrid);
                     }
                     break;
+                case Protocol.RESTORE:
+                    String myBoardStr = parts[1];
+                    String oppBoardStr = parts[2];
+                    
+                    int idx = 0;
+                    for(int i=0; i<10; i++){
+                        for(int j=0; j<10; j++){
+                            char m = myBoardStr.charAt(idx);
+                            if (m == 'S') myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.SHIP);
+                            else if (m == 'X') myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.HIT);
+                            else if (m == 'O') myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.MISS);
+                            else myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.WATER);
+                            
+                            char o = oppBoardStr.charAt(idx);
+                            if (o == 'X') opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.HIT;
+                            else if (o == 'O') opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.MISS;
+                            else opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.WATER;
+                            
+                            idx++;
+                        }
+                    }
+                    view.updateMyBoard(myLocalGrid);
+                    view.updateOpponentBoard(opponentLocalGrid);
+                    break;
                 case Protocol.GAME_OVER:
                     int winner = Integer.parseInt(parts[1]);
                     view.onGameOver(winner);

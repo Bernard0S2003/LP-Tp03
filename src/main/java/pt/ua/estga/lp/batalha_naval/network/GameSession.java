@@ -35,9 +35,41 @@ public class GameSession {
             broadcast(Protocol.SETUP);
         } else if (state.getStatus() == GameState.GameStatus.PLAYING) {
             // Jogo recuperado
+            // Envia para o Jogador 1
+            handler1.sendMessage(Protocol.RESTORE + " " + serializeBoard(state.getPlayer1().getMyBoard()) + " " + serializeOpponentView(state.getPlayer1().getOpponentBoardView()));
+            // Envia para o Jogador 2
+            handler2.sendMessage(Protocol.RESTORE + " " + serializeBoard(state.getPlayer2().getMyBoard()) + " " + serializeOpponentView(state.getPlayer2().getOpponentBoardView()));
+
             broadcast(Protocol.START + " " + state.getCurrentPlayerTurn());
             broadcastTurn();
         }
+    }
+
+    private String serializeBoard(Board board) {
+        StringBuilder sb = new StringBuilder(100);
+        for(int i = 0; i < Board.SIZE; i++) {
+            for(int j = 0; j < Board.SIZE; j++) {
+                Cell.CellState st = board.getCell(i, j).getState();
+                if (st == Cell.CellState.SHIP) sb.append('S');
+                else if (st == Cell.CellState.HIT || st == Cell.CellState.SUNK) sb.append('X');
+                else if (st == Cell.CellState.MISS) sb.append('O');
+                else sb.append('~');
+            }
+        }
+        return sb.toString();
+    }
+
+    private String serializeOpponentView(Cell.CellState[][] view) {
+        StringBuilder sb = new StringBuilder(100);
+        for(int i = 0; i < Board.SIZE; i++) {
+            for(int j = 0; j < Board.SIZE; j++) {
+                Cell.CellState st = view[i][j];
+                if (st == Cell.CellState.HIT || st == Cell.CellState.SUNK) sb.append('X');
+                else if (st == Cell.CellState.MISS) sb.append('O');
+                else sb.append('~');
+            }
+        }
+        return sb.toString();
     }
 
     /**
@@ -52,23 +84,42 @@ public class GameSession {
      * Processa a configuração de barcos de um jogador.
      */
     public synchronized void handlePlacement(int playerId, String data) {
-        // Para simplificar na arquitetura, assumimos que o Cliente apenas envia PLACE OK após validar do lado dele
-        // Num cenário de produção real, o servidor desserializaria os navios e validaria o Board.
         Player p = state.getPlayerById(playerId);
         
-        // Verifica se ambos estão prontos para iniciar o jogo
-        // Por agora vamos passar o status para PLAYING quando o segundo colocar (assumindo que o primeiro já colocou)
-        // O cliente envia PLACE READY
+        if (!data.equals("AUTO_OK") && !data.trim().isEmpty()) {
+            String[] ships = data.split(",");
+            for (String s : ships) {
+                String[] parts = s.split(" ");
+                if (parts.length >= 4) {
+                    int size = Integer.parseInt(parts[0]);
+                    int x = Integer.parseInt(parts[1]);
+                    int y = Integer.parseInt(parts[2]);
+                    boolean horiz = parts[3].equals("H");
+                    
+                    ShipType type = null;
+                    for (ShipType t : ShipType.values()) {
+                        if (t.getSize() == size) { type = t; break; } // Pode haver mais do que 1 do mesmo tamanho, mas a lógica de Hits no backend lida bem com isto.
+                    }
+                    if (type != null) {
+                        p.getMyBoard().placeShip(new Ship(type), x, y, horiz);
+                    }
+                }
+            }
+        }
+        
+        p.setReady(true);
         
         if (state.getStatus() == GameState.GameStatus.PLACING_SHIPS) {
-            // Checa se ambos já colocaram (lógica simplificada para o âmbito do trab)
-            state.setStatus(GameState.GameStatus.PLAYING);
-            // Sorteio inicial
-            int firstPlayer = Math.random() < 0.5 ? state.getPlayer1().getId() : state.getPlayer2().getId();
-            state.setCurrentPlayerTurn(firstPlayer);
-            
-            broadcast(Protocol.START + " " + firstPlayer);
-            broadcastTurn();
+            if (state.getPlayer1().isReady() && state.getPlayer2().isReady()) {
+                state.setStatus(GameState.GameStatus.PLAYING);
+                int firstPlayer = Math.random() < 0.5 ? state.getPlayer1().getId() : state.getPlayer2().getId();
+                state.setCurrentPlayerTurn(firstPlayer);
+                
+                broadcast(Protocol.START + " " + firstPlayer);
+                broadcastTurn();
+            } else {
+                getHandler(playerId).sendMessage(Protocol.WAITING + " A aguardar que o adversário coloque os seus navios...");
+            }
         }
     }
 
