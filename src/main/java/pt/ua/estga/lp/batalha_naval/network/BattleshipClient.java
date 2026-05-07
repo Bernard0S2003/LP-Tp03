@@ -94,94 +94,99 @@ public class BattleshipClient {
         }
 
         private void processServerMessage(String msg) {
-            String[] parts = msg.split(" ");
-            String cmd = parts[0];
+            try {
+                String[] parts = msg.split(" ");
+                String cmd = parts[0];
 
-            switch (cmd) {
-                case Protocol.WELCOME:
-                    myId = Integer.parseInt(parts[1]);
-                    gameId = parts[2];
-                    view.showMessage("Conectado! Tu és o Jogador " + myId + ". Jogo ID: " + gameId);
-                    break;
-                case Protocol.WAITING:
-                    view.showMessage("A aguardar o oponente...");
-                    break;
-                case Protocol.SETUP:
-                    view.requestShipPlacement();
-                    break;
-                case Protocol.START:
-                    int firstPlayerId = Integer.parseInt(parts[1]);
-                    view.onGameStart(firstPlayerId);
-                    break;
-                case Protocol.TURN:
-                    int currentPlayerId = Integer.parseInt(parts[1]);
-                    int shots = Integer.parseInt(parts[2]);
-                    if (currentPlayerId == myId) {
-                        view.onTurnStart(shots);
-                    } else {
-                        view.onTurnEnd();
-                        view.showMessage("Turno do adversário. Aguarda...");
-                    }
-                    break;
-                case Protocol.SHOT_RES:
-                    // SHOT_RESULT <PlayerID> <X> <Y> <RESULT> [INFO]
-                    int shooter = Integer.parseInt(parts[1]);
-                    int x = Integer.parseInt(parts[2]);
-                    int y = Integer.parseInt(parts[3]);
-                    String res = parts[4];
-                    String info = parts.length > 5 ? parts[5] : "";
-                    
-                    pt.ua.estga.lp.batalha_naval.model.Cell.CellState shotState = 
-                        (res.startsWith(Protocol.RES_HIT) || res.startsWith(Protocol.RES_SUNK)) 
-                        ? pt.ua.estga.lp.batalha_naval.model.Cell.CellState.HIT 
-                        : pt.ua.estga.lp.batalha_naval.model.Cell.CellState.MISS;
-
-                    if (shooter == myId) {
-                        view.showMessage("O teu tiro em (" + x + "," + y + "): " + res + " " + info);
-                        opponentLocalGrid[x][y] = shotState;
-                        view.updateOpponentBoard(opponentLocalGrid);
-                    } else {
-                        view.showMessage("Adversário atirou em (" + x + "," + y + "): " + res + " " + info);
-                        myLocalGrid[x][y].setState(shotState);
-                        view.updateMyBoard(myLocalGrid);
-                    }
-                    break;
-                case Protocol.RESTORE:
-                    String myBoardStr = parts[1];
-                    String oppBoardStr = parts[2];
-                    
-                    int idx = 0;
-                    for(int i=0; i<10; i++){
-                        for(int j=0; j<10; j++){
-                            char m = myBoardStr.charAt(idx);
-                            if (m == 'S') myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.SHIP);
-                            else if (m == '*') myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.SUNK);
-                            else if (m == 'X') myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.HIT);
-                            else if (m == 'O') myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.MISS);
-                            else myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.WATER);
-                            
-                            char o = oppBoardStr.charAt(idx);
-                            if (o == '*') opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.SUNK;
-                            else if (o == 'X') opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.HIT;
-                            else if (o == 'O') opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.MISS;
-                            else opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.WATER;
-                            
-                            idx++;
+                switch (cmd) {
+                    case Protocol.WELCOME:
+                        myId = Integer.parseInt(parts[1]);
+                        gameId = parts[2];
+                        view.showMessage("Conectado! Tu és o Jogador " + myId + ". Jogo ID: " + gameId);
+                        break;
+                    case Protocol.WAITING:
+                        view.showMessage("A aguardar o oponente...");
+                        break;
+                    case Protocol.SETUP:
+                        view.requestShipPlacement();
+                        break;
+                    case Protocol.START:
+                        int firstPlayerId = Integer.parseInt(parts[1]);
+                        view.onGameStart(firstPlayerId);
+                        break;
+                    case Protocol.TURN:
+                        int currentPlayerId = Integer.parseInt(parts[1]);
+                        int shots = Integer.parseInt(parts[2]);
+                        if (currentPlayerId == myId) {
+                            view.onTurnStart(shots);
+                        } else {
+                            view.onTurnEnd();
+                            view.showMessage("Turno do adversário. Aguarda...");
                         }
-                    }
-                    view.updateMyBoard(myLocalGrid);
-                    view.updateOpponentBoard(opponentLocalGrid);
-                    break;
-                case Protocol.GAME_OVER:
-                    int winner = Integer.parseInt(parts[1]);
-                    view.onGameOver(winner);
-                    break;
-                case Protocol.SAVED:
-                    view.showMessage("Jogo guardado com sucesso! ID: " + parts[1]);
-                    break;
-                case Protocol.ERROR:
-                    view.showError(msg.substring(msg.indexOf(" ") + 1));
-                    break;
+                        break;
+                    case Protocol.SHOT_RES:
+                        // SHOT_RESULT <PlayerID> <X> <Y> <RESULT> [INFO]
+                        int shooter = Integer.parseInt(parts[1]);
+                        int x = Integer.parseInt(parts[2]);
+                        int y = Integer.parseInt(parts[3]);
+                        String res = parts[4];
+                        String info = parts.length > 5 ? parts[5] : "";
+                        
+                        pt.ua.estga.lp.batalha_naval.model.Cell.CellState shotState = 
+                            (res.startsWith(Protocol.RES_HIT) || res.startsWith(Protocol.RES_SUNK)) 
+                            ? pt.ua.estga.lp.batalha_naval.model.Cell.CellState.HIT 
+                            : pt.ua.estga.lp.batalha_naval.model.Cell.CellState.MISS;
+
+                        if (shooter == myId) {
+                            view.showMessage("O teu tiro em (" + x + "," + y + "): " + res + " " + info);
+                            opponentLocalGrid[x][y] = shotState;
+                            view.updateOpponentBoard(opponentLocalGrid);
+                        } else {
+                            view.showMessage("Adversário atirou em (" + x + "," + y + "): " + res + " " + info);
+                            myLocalGrid[x][y].setState(shotState);
+                            view.updateMyBoard(myLocalGrid);
+                        }
+                        break;
+                    case Protocol.RESTORE:
+                        String myBoardStr = parts[1];
+                        String oppBoardStr = parts[2];
+                        
+                        int idx = 0;
+                        for(int i=0; i<10; i++){
+                            for(int j=0; j<10; j++){
+                                char m = myBoardStr.charAt(idx);
+                                if (m == 'S') myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.SHIP);
+                                else if (m == '*') myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.SUNK);
+                                else if (m == 'X') myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.HIT);
+                                else if (m == 'O') myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.MISS);
+                                else myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.WATER);
+                                
+                                char o = oppBoardStr.charAt(idx);
+                                if (o == '*') opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.SUNK;
+                                else if (o == 'X') opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.HIT;
+                                else if (o == 'O') opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.MISS;
+                                else opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.WATER;
+                                
+                                idx++;
+                            }
+                        }
+                        view.updateMyBoard(myLocalGrid);
+                        view.updateOpponentBoard(opponentLocalGrid);
+                        break;
+                    case Protocol.GAME_OVER:
+                        int winner = Integer.parseInt(parts[1]);
+                        view.onGameOver(winner);
+                        break;
+                    case Protocol.SAVED:
+                        view.showMessage("Jogo guardado com sucesso! ID: " + parts[1]);
+                        break;
+                    case Protocol.ERROR:
+                        view.showError(msg.substring(msg.indexOf(" ") + 1));
+                        break;
+                }
+            } catch (Exception e) {
+                view.showMessage("ERRO LOCAL: " + e.getMessage());
+                e.printStackTrace();
             }
         }
     }
