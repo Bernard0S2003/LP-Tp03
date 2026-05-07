@@ -57,6 +57,8 @@ public class BattleshipServer {
         }
     }
 
+    private java.util.Map<String, List<ClientHandler>> recoveringGames = new java.util.HashMap<>();
+
     public synchronized void loadGame(String gameId, ClientHandler initiator) {
         GameState state = Storage.loadGame(gameId);
         if (state == null) {
@@ -64,12 +66,26 @@ public class BattleshipServer {
             return;
         }
 
-        // Lógica de recuperação simplificada: 
-        // O jogador que carrega o jogo fica em espera até que o outro se conecte com um LOAD também, 
-        // ou assume os waitingClients. Para o escopo deste TP, faremos a reconexão se houver 2 players esperando.
-        initiator.sendMessage(Protocol.WAITING + " a aguardar reconexão do oponente para o jogo " + gameId);
-        
-        // Num cenário completo teríamos um mapa de reconnects. Aqui simplificaremos assumindo que os dois clientes 
-        // vão cair no playerReady() logo de seguida e a sessão cuidará disso.
+        List<ClientHandler> list = recoveringGames.computeIfAbsent(gameId, k -> new ArrayList<>());
+        if (!list.contains(initiator)) {
+            list.add(initiator);
+        }
+
+        if (list.size() == 2) {
+            ClientHandler p1 = list.get(0);
+            ClientHandler p2 = list.get(1);
+            recoveringGames.remove(gameId);
+
+            System.out.println("Dois jogadores reconectados para a partida " + gameId + "! Retomando...");
+            
+            // Atualizar os IDs dos jogadores persistidos para coincidir com as novas conexões de sockets
+            state.getPlayer1().setId(p1.getPlayerId());
+            state.getPlayer2().setId(p2.getPlayerId());
+
+            GameSession session = new GameSession(p1, p2, state);
+            session.start();
+        } else {
+            initiator.sendMessage(Protocol.WAITING + " - Jogo carregado. A aguardar que o adversário introduza o ID: " + gameId);
+        }
     }
 }

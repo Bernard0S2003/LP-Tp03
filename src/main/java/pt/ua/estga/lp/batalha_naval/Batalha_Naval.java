@@ -27,6 +27,8 @@ public class Batalha_Naval {
                 break;
             case 2:
                 CLIView cli = new CLIView();
+                BattleshipClient client = new BattleshipClient("localhost", 8080, cli);
+                cli.setClient(client);
                 cli.run();
                 break;
             case 3:

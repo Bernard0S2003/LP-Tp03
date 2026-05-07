@@ -56,7 +56,11 @@ public class ClientHandler implements Runnable {
                 switch (command) {
                     case Protocol.JOIN:
                         this.playerName = parts.length > 1 ? parts[1] : "Jogador" + playerId;
-                        server.playerReady(this);
+                        if (parts.length > 2) {
+                            server.loadGame(parts[2], this);
+                        } else {
+                            server.playerReady(this);
+                        }
                         break;
                     case Protocol.PLACE:
                         if (session != null) session.handlePlacement(playerId, inputLine);
