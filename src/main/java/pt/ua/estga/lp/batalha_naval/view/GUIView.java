@@ -122,13 +122,26 @@ public class GUIView extends JFrame implements GameView {
         }
     }
 
+    private boolean hasShipAroundLocal(int r, int c) {
+        for (int i = -1; i <= 1; i++) {
+            for (int j = -1; j <= 1; j++) {
+                int nr = r + i;
+                int nc = c + j;
+                if (nr >= 0 && nr < Board.SIZE && nc >= 0 && nc < Board.SIZE) {
+                    if (localOccupied[nr][nc]) return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private boolean canPlaceLocal(int size, int r, int c, boolean horiz) {
         if (horiz) {
             if (c + size > Board.SIZE) return false;
-            for (int i = 0; i < size; i++) if (localOccupied[r][c + i]) return false;
+            for (int i = 0; i < size; i++) if (hasShipAroundLocal(r, c + i)) return false;
         } else {
             if (r + size > Board.SIZE) return false;
-            for (int i = 0; i < size; i++) if (localOccupied[r + i][c]) return false;
+            for (int i = 0; i < size; i++) if (hasShipAroundLocal(r + i, c)) return false;
         }
         return true;
     }
@@ -213,7 +226,9 @@ public class GUIView extends JFrame implements GameView {
                     if (st == Cell.CellState.SHIP) {
                         myCells[i][j].setBackground(Color.DARK_GRAY);
                         localOccupied[i][j] = true;
-                    } else if (st == Cell.CellState.HIT || st == Cell.CellState.SUNK) {
+                    } else if (st == Cell.CellState.SUNK) {
+                        myCells[i][j].setBackground(Color.GRAY);
+                    } else if (st == Cell.CellState.HIT) {
                         myCells[i][j].setBackground(Color.RED);
                     } else if (st == Cell.CellState.MISS) {
                         myCells[i][j].setBackground(Color.BLUE);
@@ -235,7 +250,9 @@ public class GUIView extends JFrame implements GameView {
             for (int i = 0; i < Board.SIZE; i++) {
                 for (int j = 0; j < Board.SIZE; j++) {
                     Cell.CellState st = grid[i][j];
-                    if (st == Cell.CellState.HIT || st == Cell.CellState.SUNK) {
+                    if (st == Cell.CellState.SUNK) {
+                        opponentButtons[i][j].setBackground(Color.GRAY);
+                    } else if (st == Cell.CellState.HIT) {
                         opponentButtons[i][j].setBackground(Color.RED);
                     } else if (st == Cell.CellState.MISS) {
                         opponentButtons[i][j].setBackground(Color.BLUE);

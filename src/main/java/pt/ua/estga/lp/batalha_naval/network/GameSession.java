@@ -51,7 +51,8 @@ public class GameSession {
             for(int j = 0; j < Board.SIZE; j++) {
                 Cell.CellState st = board.getCell(i, j).getState();
                 if (st == Cell.CellState.SHIP) sb.append('S');
-                else if (st == Cell.CellState.HIT || st == Cell.CellState.SUNK) sb.append('X');
+                else if (st == Cell.CellState.SUNK) sb.append('*');
+                else if (st == Cell.CellState.HIT) sb.append('X');
                 else if (st == Cell.CellState.MISS) sb.append('O');
                 else sb.append('~');
             }
@@ -64,7 +65,8 @@ public class GameSession {
         for(int i = 0; i < Board.SIZE; i++) {
             for(int j = 0; j < Board.SIZE; j++) {
                 Cell.CellState st = view[i][j];
-                if (st == Cell.CellState.HIT || st == Cell.CellState.SUNK) sb.append('X');
+                if (st == Cell.CellState.SUNK) sb.append('*');
+                else if (st == Cell.CellState.HIT) sb.append('X');
                 else if (st == Cell.CellState.MISS) sb.append('O');
                 else sb.append('~');
             }
@@ -144,14 +146,29 @@ public class GameSession {
         }
 
         // Atualiza a vista do atirador
-        if (result.startsWith(Protocol.RES_HIT) || result.startsWith(Protocol.RES_SUNK)) {
-            shooter.updateOpponentBoardView(x, y, Cell.CellState.HIT); // Simplificado
+        if (result.startsWith(Protocol.RES_SUNK)) {
+            // Atualizar toda a visão do oponente para SUNK baseando-se no tabuleiro real
+            for (int r = 0; r < Board.SIZE; r++) {
+                for (int c = 0; c < Board.SIZE; c++) {
+                    if (opponent.getMyBoard().getCell(r, c).getState() == Cell.CellState.SUNK) {
+                        shooter.updateOpponentBoardView(r, c, Cell.CellState.SUNK);
+                    }
+                }
+            }
+        } else if (result.startsWith(Protocol.RES_HIT)) {
+            shooter.updateOpponentBoardView(x, y, Cell.CellState.HIT);
         } else {
             shooter.updateOpponentBoardView(x, y, Cell.CellState.MISS);
         }
 
-        // Envia o resultado para ambos
+        // Envia o resultado do tiro para a consola/log
         broadcast(Protocol.SHOT_RES + " " + playerId + " " + x + " " + y + " " + result);
+        
+        // Se afundou um navio, força a atualização completa das matrizes visuais nos dois ecrãs (para a cor Cinzenta assumir efeito em todo o navio)
+        if (result.startsWith(Protocol.RES_SUNK)) {
+            handler1.sendMessage(Protocol.RESTORE + " " + serializeBoard(state.getPlayer1().getMyBoard()) + " " + serializeOpponentView(state.getPlayer1().getOpponentBoardView()));
+            handler2.sendMessage(Protocol.RESTORE + " " + serializeBoard(state.getPlayer2().getMyBoard()) + " " + serializeOpponentView(state.getPlayer2().getOpponentBoardView()));
+        }
 
         if (opponent.getMyBoard().areAllShipsSunk()) {
             state.setWinnerId(playerId);

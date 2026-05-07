@@ -45,8 +45,8 @@ public class Board implements Serializable {
         }
 
         for (int i = 0; i < ship.getSize(); i++) {
-            int cx = horizontal ? x + i : x;
-            int cy = horizontal ? y : y + i;
+            int cx = horizontal ? x : x + i;
+            int cy = horizontal ? y + i : y;
             grid[cx][cy].setShip(ship);
         }
         
@@ -54,16 +54,29 @@ public class Board implements Serializable {
         return true;
     }
 
+    private boolean hasShipAround(int x, int y) {
+        for (int i = -1; i <= 1; i++) {
+            for (int j = -1; j <= 1; j++) {
+                int nx = x + i;
+                int ny = y + j;
+                if (nx >= 0 && nx < SIZE && ny >= 0 && ny < SIZE) {
+                    if (grid[nx][ny].hasShip()) return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private boolean canPlaceShip(int size, int x, int y, boolean horizontal) {
         if (horizontal) {
-            if (x < 0 || y < 0 || x + size > SIZE || y >= SIZE) return false;
+            if (x < 0 || y < 0 || y + size > SIZE || x >= SIZE) return false;
             for (int i = 0; i < size; i++) {
-                if (grid[x + i][y].hasShip()) return false;
+                if (hasShipAround(x, y + i)) return false;
             }
         } else {
-            if (x < 0 || y < 0 || x >= SIZE || y + size > SIZE) return false;
+            if (x < 0 || y < 0 || x + size > SIZE || y >= SIZE) return false;
             for (int i = 0; i < size; i++) {
-                if (grid[x][y + i].hasShip()) return false;
+                if (hasShipAround(x + i, y)) return false;
             }
         }
         return true;
