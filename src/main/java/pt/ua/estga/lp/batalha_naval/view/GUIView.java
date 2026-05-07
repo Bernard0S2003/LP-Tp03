@@ -217,6 +217,10 @@ public class GUIView extends JFrame implements GameView {
                         myCells[i][j].setBackground(Color.RED);
                     } else if (st == Cell.CellState.MISS) {
                         myCells[i][j].setBackground(Color.BLUE);
+                    } else if (localOccupied[i][j]) {
+                        // O grid pode dizer que é WATER (porque o cliente localmente não construiu um Ship),
+                        // mas se nós o colocamos visualmente antes do jogo iniciar, forçamos o cinzento.
+                        myCells[i][j].setBackground(Color.DARK_GRAY);
                     } else {
                         myCells[i][j].setBackground(Color.CYAN);
                     }
