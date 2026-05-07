@@ -63,7 +63,10 @@ public class ClientHandler implements Runnable {
                         }
                         break;
                     case Protocol.PLACE:
-                        if (session != null) session.handlePlacement(playerId, inputLine);
+                        if (session != null && inputLine.contains(" ")) {
+                            String placementData = inputLine.substring(inputLine.indexOf(" ") + 1);
+                            session.handlePlacement(playerId, placementData);
+                        }
                         break;
                     case Protocol.SHOOT:
                         if (session != null && parts.length >= 3) {
