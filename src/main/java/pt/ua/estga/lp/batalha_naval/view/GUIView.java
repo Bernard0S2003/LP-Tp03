@@ -72,16 +72,19 @@ public class GUIView extends JFrame implements GameView {
     }
 
     public void start(String ip, int port) {
+        // Tornar visível e centrar imediatamente para não ficar oculto atrás do IDE
+        setLocationRelativeTo(null);
+        setVisible(true);
+        requestFocus();
+
         String name = JOptionPane.showInputDialog(this, "Introduz o teu Nome:");
         if (name == null || name.trim().isEmpty()) System.exit(0);
         
         String idToLoad = JOptionPane.showInputDialog(this, "Deixa em branco para NOVO JOGO, ou insere o ID do jogo a carregar:");
 
         this.client = new BattleshipClient(ip, port, this);
-        if (client.connect(name, idToLoad)) {
-            setVisible(true);
-        } else {
-            JOptionPane.showMessageDialog(this, "Falha ao ligar ao servidor.");
+        if (!client.connect(name, idToLoad)) {
+            JOptionPane.showMessageDialog(this, "Falha ao ligar ao servidor em " + ip + ":" + port + ".\nVerifique se o Servidor já está a correr noutra consola!");
             System.exit(0);
         }
     }
