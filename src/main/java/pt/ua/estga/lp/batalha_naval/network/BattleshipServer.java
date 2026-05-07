@@ -78,9 +78,20 @@ public class BattleshipServer {
 
             System.out.println("Dois jogadores reconectados para a partida " + gameId + "! Retomando...");
             
+            int oldP1Id = state.getPlayer1().getId();
+            int oldP2Id = state.getPlayer2().getId();
+
             // Atualizar os IDs dos jogadores persistidos para coincidir com as novas conexões de sockets
             state.getPlayer1().setId(p1.getPlayerId());
             state.getPlayer2().setId(p2.getPlayerId());
+
+            int savedShots = state.getShotsRemaining();
+            if (state.getCurrentPlayerTurn() == oldP1Id) {
+                state.setCurrentPlayerTurn(p1.getPlayerId());
+            } else if (state.getCurrentPlayerTurn() == oldP2Id) {
+                state.setCurrentPlayerTurn(p2.getPlayerId());
+            }
+            state.setShotsRemaining(savedShots);
 
             GameSession session = new GameSession(p1, p2, state);
             session.start();

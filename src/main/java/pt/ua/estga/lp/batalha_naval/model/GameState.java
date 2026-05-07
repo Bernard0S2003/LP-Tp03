@@ -76,6 +76,10 @@ public class GameState implements Serializable {
         return shotsRemaining;
     }
 
+    public void setShotsRemaining(int shotsRemaining) {
+        this.shotsRemaining = shotsRemaining;
+    }
+
     public void decrementShotsRemaining() {
         if (this.shotsRemaining > 0) {
             this.shotsRemaining--;
