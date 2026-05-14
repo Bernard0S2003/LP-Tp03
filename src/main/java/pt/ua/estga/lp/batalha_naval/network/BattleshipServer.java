@@ -53,7 +53,7 @@ public class BattleshipServer {
             session = new GameSession(p1, p2, state);
             session.start();
         } else {
-            handler.sendMessage(Protocol.WAITING);
+            handler.sendMessage(new Protocol(Protocol.Command.WAITING));
         }
     }
 
@@ -63,7 +63,9 @@ public class BattleshipServer {
     public synchronized void loadGame(String gameId, ClientHandler initiator) {
         GameState state = Storage.loadGame(gameId);
         if (state == null) {
-            initiator.sendMessage(Protocol.ERROR + " Jogo não encontrado!");
+            Protocol err = new Protocol(Protocol.Command.ERROR);
+            err.setMessage("Jogo não encontrado!");
+            initiator.sendMessage(err);
             return;
         }
 
@@ -98,8 +100,9 @@ public class BattleshipServer {
             GameSession session = new GameSession(p1, p2, state);
             session.start();
         } else {
-            initiator.sendMessage(
-                    Protocol.WAITING + " - Jogo carregado. A aguardar que o adversário introduza o ID: " + gameId);
+            Protocol waitPayload = new Protocol(Protocol.Command.WAITING);
+            waitPayload.setMessage("Jogo carregado. A aguardar que o adversário introduza o ID: " + gameId);
+            initiator.sendMessage(waitPayload);
         }
     }
 }
