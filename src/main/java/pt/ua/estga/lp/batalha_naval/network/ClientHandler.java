@@ -17,11 +17,13 @@ public class ClientHandler implements Runnable {
     private String playerName;
     private GameSession session;
     private BattleshipServer server;
+    private String clientIp;
 
     public ClientHandler(Socket socket, BattleshipServer server, int playerId) {
         this.socket = socket;
         this.server = server;
         this.playerId = playerId;
+        this.clientIp = socket.getInetAddress().getHostAddress();
         try {
             // IMPORTANTE: Inicializar ObjectOutputStream ANTES de ObjectInputStream
             // para evitar deadlock nos construtores bloqueantes.
@@ -43,6 +45,10 @@ public class ClientHandler implements Runnable {
 
     public String getPlayerName() {
         return playerName;
+    }
+
+    public String getClientIp() {
+        return clientIp;
     }
 
     /**
