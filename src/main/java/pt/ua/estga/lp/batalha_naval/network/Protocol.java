@@ -29,7 +29,8 @@ public class Protocol implements Serializable {
         GAME_OVER,     // Declarar fim de jogo e o vencedor
         SAVED,         // Confirmar que o jogo foi gravado com sucesso
         ERROR,         // Enviar mensagem de erro
-        DISCONNECT_TIMER // Contagem decrescente de perda de ligação
+        DISCONNECT_TIMER, // Contagem decrescente de perda de ligação
+        NEED_LOGIN     // Indicar que o servidor necessita de identificação normal
     }
 
     // Resultados estáticos do tiro (mantidos para compatibilidade com a lógica do Board)
