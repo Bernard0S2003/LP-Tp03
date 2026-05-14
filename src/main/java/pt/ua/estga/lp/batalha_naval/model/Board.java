@@ -155,4 +155,8 @@ public class Board implements Serializable {
     public List<Ship> getFleet() {
         return fleet;
     }
+
+    public Cell[][] getGrid() {
+        return grid;
+    }
 }
