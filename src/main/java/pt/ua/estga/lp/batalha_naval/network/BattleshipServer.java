@@ -16,6 +16,7 @@ import java.util.List;
 public class BattleshipServer {
     private static final int PORT = 8080;
     private List<ClientHandler> waitingClients = new ArrayList<>();
+    private List<GameSession> activeSessions = new ArrayList<>();
     private int nextPlayerId = 1;
 
     public void startServer() {
@@ -51,6 +52,7 @@ public class BattleshipServer {
 
             // Re-instanciar sessão com o state preenchido
             session = new GameSession(p1, p2, state);
+            activeSessions.add(session);
             session.start();
         } else {
             handler.sendMessage(new Protocol(Protocol.Command.WAITING));
@@ -98,11 +100,25 @@ public class BattleshipServer {
             state.setShotsRemaining(savedShots);
 
             GameSession session = new GameSession(p1, p2, state);
+            activeSessions.add(session);
             session.start();
         } else {
             Protocol waitPayload = new Protocol(Protocol.Command.WAITING);
             waitPayload.setMessage("Jogo carregado. A aguardar que o adversário introduza o ID: " + gameId);
             initiator.sendMessage(waitPayload);
         }
+    }
+
+    public synchronized boolean tryIPReconnection(ClientHandler newHandler) {
+        for (GameSession session : activeSessions) {
+            if (session.reconnectPlayer(newHandler)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public synchronized void removeSession(GameSession session) {
+        activeSessions.remove(session);
     }
 }
