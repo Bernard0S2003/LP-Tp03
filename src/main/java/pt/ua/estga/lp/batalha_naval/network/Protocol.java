@@ -28,7 +28,8 @@ public class Protocol implements Serializable {
         RESTORE,       // Enviar estado do tabuleiro restaurado
         GAME_OVER,     // Declarar fim de jogo e o vencedor
         SAVED,         // Confirmar que o jogo foi gravado com sucesso
-        ERROR          // Enviar mensagem de erro
+        ERROR,         // Enviar mensagem de erro
+        DISCONNECT_TIMER // Contagem decrescente de perda de ligação
     }
 
     // Resultados estáticos do tiro (mantidos para compatibilidade com a lógica do Board)
@@ -59,6 +60,9 @@ public class Protocol implements Serializable {
 
     // Mensagens de texto genéricas (para erros, info, etc.)
     private String message;
+    
+    // Dados temporizadores para desconexão resiliente
+    private int timerSeconds;
 
     /**
      * Construtor padrão obrigatório.
@@ -171,5 +175,13 @@ public class Protocol implements Serializable {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public int getTimerSeconds() {
+        return timerSeconds;
+    }
+
+    public void setTimerSeconds(int timerSeconds) {
+        this.timerSeconds = timerSeconds;
     }
 }
