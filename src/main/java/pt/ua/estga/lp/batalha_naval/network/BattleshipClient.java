@@ -70,6 +70,24 @@ public class BattleshipClient {
         }
     }
 
+    /**
+     * Envia o payload JOIN com as credenciais recolhidas após falha de reconexão por IP.
+     */
+    public void sendJoin(String playerName, String optionalGameIdToLoad) {
+        try {
+            Protocol joinPayload = new Protocol(Protocol.Command.JOIN);
+            joinPayload.setPlayerName(playerName);
+            if (optionalGameIdToLoad != null && !optionalGameIdToLoad.isEmpty()) {
+                joinPayload.setGameId(optionalGameIdToLoad);
+            }
+            out.writeObject(joinPayload);
+            out.flush();
+            out.reset();
+        } catch (IOException e) {
+            view.showError("Erro ao enviar dados de autenticação: " + e.getMessage());
+        }
+    }
+
     public void sendPlacement(String placementData) {
         try {
             Protocol p = new Protocol(Protocol.Command.PLACE);
@@ -218,6 +236,9 @@ public class BattleshipClient {
                         } else {
                             view.onShowTimer(seconds);
                         }
+                        break;
+                    case NEED_LOGIN:
+                        view.onRequestLogin();
                         break;
                 }
             } catch (Exception e) {
