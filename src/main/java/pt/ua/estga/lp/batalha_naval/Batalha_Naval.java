@@ -2,7 +2,6 @@ package pt.ua.estga.lp.batalha_naval;
 
 import pt.ua.estga.lp.batalha_naval.network.BattleshipServer;
 import pt.ua.estga.lp.batalha_naval.network.BattleshipClient;
-import pt.ua.estga.lp.batalha_naval.view.CLIView;
 import pt.ua.estga.lp.batalha_naval.view.GUIView;
 
 import javax.swing.*;
@@ -14,9 +13,8 @@ public class Batalha_Naval {
         System.out.println("Bem-vindo à Batalha Naval!");
         System.out.println("Escolha o modo de execução:");
         System.out.println("1. Servidor (Árbitro)");
-        System.out.println("2. Cliente CLI (Consola)");
-        System.out.println("3. Cliente GUI (Interface Gráfica)");
-        
+        System.out.println("2. Cliente GUI (Interface Gráfica)");
+
         Scanner scanner = new Scanner(System.in);
         System.out.print("Opção: ");
         int opt = scanner.nextInt();
@@ -27,12 +25,6 @@ public class Batalha_Naval {
                 server.startServer();
                 break;
             case 2:
-                CLIView cli = new CLIView();
-                BattleshipClient client = new BattleshipClient("localhost", 8080, cli);
-                cli.setClient(client);
-                cli.run();
-                break;
-            case 3:
                 SwingUtilities.invokeLater(() -> {
                     GUIView gui = new GUIView();
                     gui.start("localhost", 8080);

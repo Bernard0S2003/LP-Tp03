@@ -12,7 +12,7 @@ public class Player implements Serializable {
     private String name;
     private Board myBoard;
     private boolean isReady = false;
-    
+
     // Matriz simplificada para guardar os tiros que o jogador já efetuou
     private Cell.CellState[][] opponentBoardView;
 
@@ -20,7 +20,7 @@ public class Player implements Serializable {
         this.id = id;
         this.name = name;
         this.myBoard = new Board();
-        
+
         this.opponentBoardView = new Cell.CellState[Board.SIZE][Board.SIZE];
         for (int i = 0; i < Board.SIZE; i++) {
             for (int j = 0; j < Board.SIZE; j++) {
@@ -57,6 +57,7 @@ public class Player implements Serializable {
         return opponentBoardView;
     }
 
+    // Possivel alteracao do board daqui para board.java
     public void updateOpponentBoardView(int x, int y, Cell.CellState state) {
         if (myBoard.isValidCoordinate(x, y)) {
             this.opponentBoardView[x][y] = state;

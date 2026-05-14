@@ -20,12 +20,12 @@ public class BattleshipServer {
 
     public void startServer() {
         System.out.println("Iniciando Servidor de Batalha Naval na porta " + PORT + "...");
-        
+
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             while (true) {
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("Novo cliente conectado: " + clientSocket.getInetAddress());
-                
+
                 ClientHandler handler = new ClientHandler(clientSocket, this, nextPlayerId++);
                 new Thread(handler).start();
             }
@@ -42,13 +42,13 @@ public class BattleshipServer {
             waitingClients.clear();
 
             System.out.println("Dois jogadores conectados! Iniciando partida...");
-            
+
             GameSession session = new GameSession(p1, p2, null);
             // Configurar jogadores iniciais na GameState
             GameState state = new GameState();
             state.setPlayer1(new Player(p1.getPlayerId(), "Jogador 1"));
             state.setPlayer2(new Player(p2.getPlayerId(), "Jogador 2"));
-            
+
             // Re-instanciar sessão com o state preenchido
             session = new GameSession(p1, p2, state);
             session.start();
@@ -57,6 +57,7 @@ public class BattleshipServer {
         }
     }
 
+    // rever
     private java.util.Map<String, List<ClientHandler>> recoveringGames = new java.util.HashMap<>();
 
     public synchronized void loadGame(String gameId, ClientHandler initiator) {
@@ -77,11 +78,12 @@ public class BattleshipServer {
             recoveringGames.remove(gameId);
 
             System.out.println("Dois jogadores reconectados para a partida " + gameId + "! Retomando...");
-            
+
             int oldP1Id = state.getPlayer1().getId();
             int oldP2Id = state.getPlayer2().getId();
 
-            // Atualizar os IDs dos jogadores persistidos para coincidir com as novas conexões de sockets
+            // Atualizar os IDs dos jogadores persistidos para coincidir com as novas
+            // conexões de sockets
             state.getPlayer1().setId(p1.getPlayerId());
             state.getPlayer2().setId(p2.getPlayerId());
 
@@ -96,7 +98,8 @@ public class BattleshipServer {
             GameSession session = new GameSession(p1, p2, state);
             session.start();
         } else {
-            initiator.sendMessage(Protocol.WAITING + " - Jogo carregado. A aguardar que o adversário introduza o ID: " + gameId);
+            initiator.sendMessage(
+                    Protocol.WAITING + " - Jogo carregado. A aguardar que o adversário introduza o ID: " + gameId);
         }
     }
 }

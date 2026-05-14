@@ -1,6 +1,5 @@
 package pt.ua.estga.lp.batalha_naval.network;
 
-import pt.ua.estga.lp.batalha_naval.model.Cell;
 import pt.ua.estga.lp.batalha_naval.view.GameView;
 
 import java.io.BufferedReader;
@@ -10,7 +9,8 @@ import java.io.PrintWriter;
 import java.net.Socket;
 
 /**
- * Cliente que se conecta ao servidor. Inicia uma Thread (NetworkListener) para ouvir atualizações.
+ * Cliente que se conecta ao servidor. Inicia uma Thread (NetworkListener) para
+ * ouvir atualizações.
  */
 public class BattleshipClient {
     private String serverIp;
@@ -19,10 +19,10 @@ public class BattleshipClient {
     private PrintWriter out;
     private BufferedReader in;
     private GameView view;
-    
+
     private int myId;
     private String gameId;
-    
+
     private pt.ua.estga.lp.batalha_naval.model.Cell[][] myLocalGrid;
     private pt.ua.estga.lp.batalha_naval.model.Cell.CellState[][] opponentLocalGrid;
 
@@ -30,7 +30,7 @@ public class BattleshipClient {
         this.serverIp = serverIp;
         this.serverPort = serverPort;
         this.view = view;
-        
+
         // Inicializar matrizes locais para simular o estado e alimentar as vistas
         myLocalGrid = new pt.ua.estga.lp.batalha_naval.model.Cell[10][10];
         opponentLocalGrid = new pt.ua.estga.lp.batalha_naval.model.Cell.CellState[10][10];
@@ -51,7 +51,8 @@ public class BattleshipClient {
             // Iniciar a Thread que ouve o servidor
             new Thread(new NetworkListener()).start();
 
-            // Enviar comando inicial combinando o JOIN com o LOAD opcional num único comando atómico
+            // Enviar comando inicial combinando o JOIN com o LOAD opcional num único
+            // comando atómico
             if (optionalGameIdToLoad != null && !optionalGameIdToLoad.isEmpty()) {
                 out.println(Protocol.JOIN + " " + playerName + " " + optionalGameIdToLoad);
             } else {
@@ -78,7 +79,8 @@ public class BattleshipClient {
     }
 
     /**
-     * Thread que fica eternamente à escuta de mensagens do servidor para atualizar a UI.
+     * Thread que fica eternamente à escuta de mensagens do servidor para atualizar
+     * a UI.
      */
     private class NetworkListener implements Runnable {
         @Override
@@ -131,11 +133,12 @@ public class BattleshipClient {
                         int y = Integer.parseInt(parts[3]);
                         String res = parts[4];
                         String info = parts.length > 5 ? parts[5] : "";
-                        
-                        pt.ua.estga.lp.batalha_naval.model.Cell.CellState shotState = 
-                            (res.startsWith(Protocol.RES_HIT) || res.startsWith(Protocol.RES_SUNK)) 
-                            ? pt.ua.estga.lp.batalha_naval.model.Cell.CellState.HIT 
-                            : pt.ua.estga.lp.batalha_naval.model.Cell.CellState.MISS;
+
+                        // não pode ficar desta forma, rever
+                        pt.ua.estga.lp.batalha_naval.model.Cell.CellState shotState = (res.startsWith(Protocol.RES_HIT)
+                                || res.startsWith(Protocol.RES_SUNK))
+                                        ? pt.ua.estga.lp.batalha_naval.model.Cell.CellState.HIT
+                                        : pt.ua.estga.lp.batalha_naval.model.Cell.CellState.MISS;
 
                         if (shooter == myId) {
                             view.showMessage("O teu tiro em (" + x + "," + y + "): " + res + " " + info);
@@ -150,23 +153,32 @@ public class BattleshipClient {
                     case Protocol.RESTORE:
                         String myBoardStr = parts[1];
                         String oppBoardStr = parts[2];
-                        
+
                         int idx = 0;
-                        for(int i=0; i<10; i++){
-                            for(int j=0; j<10; j++){
+                        for (int i = 0; i < 10; i++) {
+                            for (int j = 0; j < 10; j++) {
                                 char m = myBoardStr.charAt(idx);
-                                if (m == 'S') myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.SHIP);
-                                else if (m == '*') myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.SUNK);
-                                else if (m == 'X') myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.HIT);
-                                else if (m == 'O') myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.MISS);
-                                else myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.WATER);
-                                
+                                if (m == 'S')
+                                    myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.SHIP);
+                                else if (m == '*')
+                                    myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.SUNK);
+                                else if (m == 'X')
+                                    myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.HIT);
+                                else if (m == 'O')
+                                    myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.MISS);
+                                else
+                                    myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.WATER);
+
                                 char o = oppBoardStr.charAt(idx);
-                                if (o == '*') opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.SUNK;
-                                else if (o == 'X') opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.HIT;
-                                else if (o == 'O') opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.MISS;
-                                else opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.WATER;
-                                
+                                if (o == '*')
+                                    opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.SUNK;
+                                else if (o == 'X')
+                                    opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.HIT;
+                                else if (o == 'O')
+                                    opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.MISS;
+                                else
+                                    opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.WATER;
+
                                 idx++;
                             }
                         }
@@ -174,7 +186,7 @@ public class BattleshipClient {
                         view.updateOpponentBoard(opponentLocalGrid);
                         break;
                     case Protocol.GAME_OVER:
-                        int winner = Integer.parseInt(parts[1]);
+                        String winner = (parts[1]);
                         view.onGameOver(winner);
                         break;
                     case Protocol.SAVED:

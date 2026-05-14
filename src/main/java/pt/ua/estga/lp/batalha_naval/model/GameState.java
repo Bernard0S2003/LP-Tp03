@@ -21,8 +21,8 @@ public class GameState implements Serializable {
     private Player player2;
     private GameStatus status;
     private int currentPlayerTurn; // ID do jogador ativo
-    private int shotsRemaining;    // Tiros restantes no turno atual (max 3)
-    private Integer winnerId;
+    private int shotsRemaining; // Tiros restantes no turno atual (max 3)
+    private String winnerId;
 
     public GameState() {
         this.gameId = UUID.randomUUID().toString();
@@ -34,7 +34,7 @@ public class GameState implements Serializable {
     public String getGameId() {
         return gameId;
     }
-    
+
     public void setGameId(String id) {
         this.gameId = id;
     }
@@ -86,24 +86,28 @@ public class GameState implements Serializable {
         }
     }
 
-    public Integer getWinnerId() {
+    public String getWinnerId() {
         return winnerId;
     }
 
-    public void setWinnerId(Integer winnerId) {
+    public void setWinnerId(String winnerId) {
         this.winnerId = winnerId;
         this.status = GameStatus.FINISHED;
     }
-    
+
     public Player getPlayerById(int id) {
-        if (player1 != null && player1.getId() == id) return player1;
-        if (player2 != null && player2.getId() == id) return player2;
+        if (player1 != null && player1.getId() == id)
+            return player1;
+        if (player2 != null && player2.getId() == id)
+            return player2;
         return null;
     }
-    
+
     public Player getOpponent(int myId) {
-        if (player1 != null && player1.getId() == myId) return player2;
-        if (player2 != null && player2.getId() == myId) return player1;
+        if (player1 != null && player1.getId() == myId)
+            return player2;
+        if (player2 != null && player2.getId() == myId)
+            return player1;
         return null;
     }
 }

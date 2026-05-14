@@ -19,7 +19,7 @@ public class GUIView extends JFrame implements GameView {
     private int shotsLeft = 0;
 
     // Estado da colocação de barcos
-    private int[] shipsToPlace = {5, 4, 3, 3, 2, 2, 2, 1, 1, 1, 1};
+    private int[] shipsToPlace = { 5, 4, 3, 3, 2, 2, 2, 1, 1, 1, 1 };
     private int currentShipIndex = 0;
     private boolean horizontalPlacement = true;
     private JPanel[][] myCells;
@@ -38,7 +38,7 @@ public class GUIView extends JFrame implements GameView {
         add(new JScrollPane(logArea), BorderLayout.SOUTH);
 
         JPanel boardsPanel = new JPanel(new GridLayout(1, 2, 20, 0));
-        
+
         // Tabuleiro do adversário (Onde disparamos)
         JPanel opponentBoard = new JPanel(new GridLayout(Board.SIZE, Board.SIZE));
         opponentBoard.setBorder(BorderFactory.createTitledBorder("Tabuleiro do Adversário"));
@@ -68,15 +68,20 @@ public class GUIView extends JFrame implements GameView {
                 int r = i, c = j;
                 cellPanel.addMouseListener(new java.awt.event.MouseAdapter() {
                     public void mouseEntered(java.awt.event.MouseEvent e) {
-                        if (!isPlacingPhase) return;
+                        if (!isPlacingPhase)
+                            return;
                         drawPreview(r, c, true);
                     }
+
                     public void mouseExited(java.awt.event.MouseEvent e) {
-                        if (!isPlacingPhase) return;
+                        if (!isPlacingPhase)
+                            return;
                         drawPreview(r, c, false);
                     }
+
                     public void mousePressed(java.awt.event.MouseEvent e) {
-                        if (!isPlacingPhase) return;
+                        if (!isPlacingPhase)
+                            return;
                         if (SwingUtilities.isRightMouseButton(e)) {
                             drawPreview(r, c, false);
                             horizontalPlacement = !horizontalPlacement;
@@ -94,24 +99,27 @@ public class GUIView extends JFrame implements GameView {
         boardsPanel.add(myBoardPanel);
         boardsPanel.add(opponentBoard);
         add(boardsPanel, BorderLayout.CENTER);
-        
+
         // Menu top
         JPanel topPanel = new JPanel(new FlowLayout());
         JButton btnSave = new JButton("Gravar Jogo");
         btnSave.addActionListener(e -> {
-            if (client != null) client.requestSave();
+            if (client != null)
+                client.requestSave();
         });
         topPanel.add(btnSave);
         add(topPanel, BorderLayout.NORTH);
     }
 
     private void drawPreview(int r, int c, boolean show) {
-        if (currentShipIndex >= shipsToPlace.length) return;
+        if (currentShipIndex >= shipsToPlace.length)
+            return;
         int size = shipsToPlace[currentShipIndex];
         boolean valid = canPlaceLocal(size, r, c, horizontalPlacement);
         Color color = valid ? Color.GREEN : Color.RED;
-        
+
         for (int i = 0; i < size; i++) {
+            // rever
             int dr = horizontalPlacement ? r : r + i;
             int dc = horizontalPlacement ? c + i : c;
             if (dr < Board.SIZE && dc < Board.SIZE) {
@@ -128,7 +136,8 @@ public class GUIView extends JFrame implements GameView {
                 int nr = r + i;
                 int nc = c + j;
                 if (nr >= 0 && nr < Board.SIZE && nc >= 0 && nc < Board.SIZE) {
-                    if (localOccupied[nr][nc]) return true;
+                    if (localOccupied[nr][nc])
+                        return true;
                 }
             }
         }
@@ -137,19 +146,27 @@ public class GUIView extends JFrame implements GameView {
 
     private boolean canPlaceLocal(int size, int r, int c, boolean horiz) {
         if (horiz) {
-            if (c + size > Board.SIZE) return false;
-            for (int i = 0; i < size; i++) if (hasShipAroundLocal(r, c + i)) return false;
+            if (c + size > Board.SIZE)
+                return false;
+            for (int i = 0; i < size; i++)
+                if (hasShipAroundLocal(r, c + i))
+                    return false;
         } else {
-            if (r + size > Board.SIZE) return false;
-            for (int i = 0; i < size; i++) if (hasShipAroundLocal(r + i, c)) return false;
+            if (r + size > Board.SIZE)
+                return false;
+            for (int i = 0; i < size; i++)
+                if (hasShipAroundLocal(r + i, c))
+                    return false;
         }
         return true;
     }
 
     private void placeShipAt(int r, int c) {
-        if (currentShipIndex >= shipsToPlace.length) return;
+        if (currentShipIndex >= shipsToPlace.length)
+            return;
         int size = shipsToPlace[currentShipIndex];
-        if (!canPlaceLocal(size, r, c, horizontalPlacement)) return;
+        if (!canPlaceLocal(size, r, c, horizontalPlacement))
+            return;
 
         for (int i = 0; i < size; i++) {
             int dr = horizontalPlacement ? r : r + i;
@@ -157,9 +174,11 @@ public class GUIView extends JFrame implements GameView {
             localOccupied[dr][dc] = true;
             myCells[dr][dc].setBackground(Color.DARK_GRAY);
         }
-        
-        if (placementString.length() > 0) placementString.append(",");
-        placementString.append(size).append(" ").append(r).append(" ").append(c).append(" ").append(horizontalPlacement ? "H" : "V");
+
+        if (placementString.length() > 0)
+            placementString.append(",");
+        placementString.append(size).append(" ").append(r).append(" ").append(c).append(" ")
+                .append(horizontalPlacement ? "H" : "V");
 
         currentShipIndex++;
         if (currentShipIndex >= shipsToPlace.length) {
@@ -178,13 +197,16 @@ public class GUIView extends JFrame implements GameView {
         requestFocus();
 
         String name = JOptionPane.showInputDialog(this, "Introduz o teu Nome:");
-        if (name == null || name.trim().isEmpty()) System.exit(0);
-        
-        String idToLoad = JOptionPane.showInputDialog(this, "Deixa em branco para NOVO JOGO, ou insere o ID do jogo a carregar:");
+        if (name == null || name.trim().isEmpty())
+            System.exit(0);
+
+        String idToLoad = JOptionPane.showInputDialog(this,
+                "Deixa em branco para NOVO JOGO, ou insere o ID do jogo a carregar:");
 
         this.client = new BattleshipClient(ip, port, this);
         if (!client.connect(name, idToLoad)) {
-            JOptionPane.showMessageDialog(this, "Falha ao ligar ao servidor em " + ip + ":" + port + ".\nVerifique se o Servidor já está a correr noutra consola!");
+            JOptionPane.showMessageDialog(this, "Falha ao ligar ao servidor em " + ip + ":" + port
+                    + ".\nVerifique se o Servidor já está a correr noutra consola!");
             System.exit(0);
         }
     }
@@ -233,8 +255,10 @@ public class GUIView extends JFrame implements GameView {
                     } else if (st == Cell.CellState.MISS) {
                         myCells[i][j].setBackground(Color.BLUE);
                     } else if (localOccupied[i][j]) {
-                        // O grid pode dizer que é WATER (porque o cliente localmente não construiu um Ship),
-                        // mas se nós o colocamos visualmente antes do jogo iniciar, forçamos o cinzento.
+                        // O grid pode dizer que é WATER (porque o cliente localmente não construiu um
+                        // Ship),
+                        // mas se nós o colocamos visualmente antes do jogo iniciar, forçamos o
+                        // cinzento.
                         myCells[i][j].setBackground(Color.DARK_GRAY);
                     } else {
                         myCells[i][j].setBackground(Color.CYAN);
@@ -281,7 +305,7 @@ public class GUIView extends JFrame implements GameView {
     }
 
     @Override
-    public void onGameOver(int winnerId) {
+    public void onGameOver(String winnerId) {
         SwingUtilities.invokeLater(() -> {
             JOptionPane.showMessageDialog(this, "JOGO TERMINADO! Vencedor: " + winnerId);
             System.exit(0);

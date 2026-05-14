@@ -26,6 +26,7 @@ public enum ShipType {
         return name;
     }
 
+    // rever
     @Override
     public String toString() {
         return name + " (" + size + " casas)";

@@ -9,6 +9,7 @@ import java.net.Socket;
 /**
  * Thread que processa os pedidos de um cliente específico no servidor.
  */
+
 public class ClientHandler implements Runnable {
     private Socket socket;
     private BufferedReader in;
@@ -76,7 +77,8 @@ public class ClientHandler implements Runnable {
                         }
                         break;
                     case Protocol.SAVE_REQUEST:
-                        if (session != null) session.handleSaveRequest();
+                        if (session != null)
+                            session.handleSaveRequest();
                         break;
                     case Protocol.LOAD_REQUEST:
                         if (parts.length >= 2) {
