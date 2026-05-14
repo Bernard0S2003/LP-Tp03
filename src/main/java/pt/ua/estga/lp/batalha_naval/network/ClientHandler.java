@@ -79,7 +79,10 @@ public class ClientHandler implements Runnable {
                     switch (payload.getCommand()) {
                         case JOIN:
                             this.playerName = payload.getPlayerName() != null ? payload.getPlayerName() : "Jogador" + playerId;
-                            if (payload.getGameId() != null && !payload.getGameId().isEmpty()) {
+                            // Prioridade máxima: verificar se o IP já pertence a um jogador offline
+                            if (server.tryIPReconnection(this)) {
+                                System.out.println("Cliente com IP " + clientIp + " reconectado automaticamente a sessão pendente.");
+                            } else if (payload.getGameId() != null && !payload.getGameId().isEmpty()) {
                                 server.loadGame(payload.getGameId(), this);
                             } else {
                                 server.playerReady(this);
