@@ -1,19 +1,18 @@
 package pt.ua.estga.lp.batalha_naval.network;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.Socket;
 
 /**
- * Thread que processa os pedidos de um cliente específico no servidor.
+ * Thread que processa os pedidos de um cliente específico no servidor,
+ * comunicando através de instâncias da classe Protocol.
  */
-
 public class ClientHandler implements Runnable {
     private Socket socket;
-    private BufferedReader in;
-    private PrintWriter out;
+    private ObjectInputStream in;
+    private ObjectOutputStream out;
     private int playerId;
     private String playerName;
     private GameSession session;
@@ -24,8 +23,11 @@ public class ClientHandler implements Runnable {
         this.server = server;
         this.playerId = playerId;
         try {
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            out = new PrintWriter(socket.getOutputStream(), true);
+            // IMPORTANTE: Inicializar ObjectOutputStream ANTES de ObjectInputStream
+            // para evitar deadlock nos construtores bloqueantes.
+            out = new ObjectOutputStream(socket.getOutputStream());
+            out.flush();
+            in = new ObjectInputStream(socket.getInputStream());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -39,55 +41,67 @@ public class ClientHandler implements Runnable {
         this.session = session;
     }
 
-    public void sendMessage(String message) {
+    /**
+     * Envia um objeto payload do tipo Protocol tipadamente para o cliente.
+     */
+    public void sendMessage(Protocol payload) {
         if (out != null) {
-            out.println(message);
+            try {
+                out.writeObject(payload);
+                out.flush();
+                // Reset é crucial para que alterações internas nas matrizes dos tabuleiros
+                // sejam detetadas em novos envios (evita cache do ObjectOutputStream)
+                out.reset();
+            } catch (IOException e) {
+                System.err.println("Erro ao enviar mensagem para Jogador " + playerId + ": " + e.getMessage());
+            }
         }
     }
 
     @Override
     public void run() {
         try {
-            String inputLine;
-            while ((inputLine = in.readLine()) != null) {
-                System.out.println("Recebido do Cliente " + playerId + ": " + inputLine);
-                String[] parts = inputLine.split(" ");
-                String command = parts[0];
+            Object inputObj;
+            while ((inputObj = in.readObject()) != null) {
+                if (inputObj instanceof Protocol payload) {
+                    System.out.println("Recebido do Cliente " + playerId + ": " + payload.getCommand());
 
-                switch (command) {
-                    case Protocol.JOIN:
-                        this.playerName = parts.length > 1 ? parts[1] : "Jogador" + playerId;
-                        if (parts.length > 2) {
-                            server.loadGame(parts[2], this);
-                        } else {
-                            server.playerReady(this);
-                        }
-                        break;
-                    case Protocol.PLACE:
-                        if (session != null && inputLine.contains(" ")) {
-                            String placementData = inputLine.substring(inputLine.indexOf(" ") + 1);
-                            session.handlePlacement(playerId, placementData);
-                        }
-                        break;
-                    case Protocol.SHOOT:
-                        if (session != null && parts.length >= 3) {
-                            int x = Integer.parseInt(parts[1]);
-                            int y = Integer.parseInt(parts[2]);
-                            session.handleShot(playerId, x, y);
-                        }
-                        break;
-                    case Protocol.SAVE_REQUEST:
-                        if (session != null)
-                            session.handleSaveRequest();
-                        break;
-                    case Protocol.LOAD_REQUEST:
-                        if (parts.length >= 2) {
-                            server.loadGame(parts[1], this);
-                        }
-                        break;
+                    switch (payload.getCommand()) {
+                        case JOIN:
+                            this.playerName = payload.getPlayerName() != null ? payload.getPlayerName() : "Jogador" + playerId;
+                            if (payload.getGameId() != null && !payload.getGameId().isEmpty()) {
+                                server.loadGame(payload.getGameId(), this);
+                            } else {
+                                server.playerReady(this);
+                            }
+                            break;
+                        case PLACE:
+                            if (session != null && payload.getPlacementData() != null) {
+                                session.handlePlacement(playerId, payload.getPlacementData());
+                            }
+                            break;
+                        case SHOOT:
+                            if (session != null) {
+                                session.handleShot(playerId, payload.getX(), payload.getY());
+                            }
+                            break;
+                        case SAVE_REQUEST:
+                            if (session != null) {
+                                session.handleSaveRequest();
+                            }
+                            break;
+                        case LOAD_REQUEST:
+                            if (payload.getGameId() != null) {
+                                server.loadGame(payload.getGameId(), this);
+                            }
+                            break;
+                        default:
+                            System.err.println("Comando desconhecido recebido: " + payload.getCommand());
+                            break;
+                    }
                 }
             }
-        } catch (IOException e) {
+        } catch (IOException | ClassNotFoundException e) {
             System.out.println("Cliente " + playerId + " desconectou-se.");
         } finally {
             if (session != null) {
