@@ -202,17 +202,11 @@ public class GUIView extends JFrame implements GameView {
         setVisible(true);
         requestFocus();
 
-        String name = JOptionPane.showInputDialog(this, "Introduz o teu Nome:");
-        if (name == null || name.trim().isEmpty())
-            System.exit(0);
-
-        String idToLoad = JOptionPane.showInputDialog(this,
-                "Deixa em branco para NOVO JOGO, ou insere o ID do jogo a carregar:");
-
+        // Envia apenas a sonda inicial baseada em IP (dados nulos)
         this.client = new BattleshipClient(ip, port, this);
-        if (!client.connect(name, idToLoad)) {
+        if (!client.connect(null, null)) {
             JOptionPane.showMessageDialog(this, "Falha ao ligar ao servidor em " + ip + ":" + port
-                    + ".\nVerifique se o Servidor já está a correr noutra consola!");
+                    + ".\nVerifique se o Servidor já está a correr!");
             System.exit(0);
         }
     }
@@ -338,6 +332,24 @@ public class GUIView extends JFrame implements GameView {
     public void onHideTimer() {
         SwingUtilities.invokeLater(() -> {
             timerLabel.setText("");
+        });
+    }
+
+    @Override
+    public void onRequestLogin() {
+        SwingUtilities.invokeLater(() -> {
+            // Ocultar temporariamente a janela principal para pedir credenciais à frente
+            String name = JOptionPane.showInputDialog(this, "Introduz o teu Nome de Jogador:");
+            if (name == null || name.trim().isEmpty()) {
+                System.exit(0);
+            }
+
+            String idToLoad = JOptionPane.showInputDialog(this,
+                    "Deixa em branco para NOVO JOGO, ou insere o ID do jogo a carregar:");
+
+            if (client != null) {
+                client.sendJoin(name, idToLoad);
+            }
         });
     }
 }
