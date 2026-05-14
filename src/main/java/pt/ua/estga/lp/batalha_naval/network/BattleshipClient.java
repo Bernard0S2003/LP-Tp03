@@ -186,8 +186,8 @@ public class BattleshipClient {
                         if (myBoardRestored != null) {
                             for (int i = 0; i < 10; i++) {
                                 for (int j = 0; j < 10; j++) {
-                                    myLocalGrid[i][j].setState(myBoardRestored[i][j].getState());
                                     myLocalGrid[i][j].setShip(myBoardRestored[i][j].getShip());
+                                    myLocalGrid[i][j].setState(myBoardRestored[i][j].getState());
                                 }
                             }
                         }
