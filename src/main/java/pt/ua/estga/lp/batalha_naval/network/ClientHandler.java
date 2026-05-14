@@ -39,6 +39,10 @@ public class ClientHandler implements Runnable {
         return playerId;
     }
 
+    public void setPlayerId(int playerId) {
+        this.playerId = playerId;
+    }
+
     public void setGameSession(GameSession session) {
         this.session = session;
     }
@@ -78,11 +82,21 @@ public class ClientHandler implements Runnable {
 
                     switch (payload.getCommand()) {
                         case JOIN:
-                            this.playerName = payload.getPlayerName() != null ? payload.getPlayerName() : "Jogador" + playerId;
-                            // Prioridade máxima: verificar se o IP já pertence a um jogador offline
+                            // 1. Prioridade Absoluta: Tentar reconectar por IP!
                             if (server.tryIPReconnection(this)) {
-                                System.out.println("Cliente com IP " + clientIp + " reconectado automaticamente a sessão pendente.");
-                            } else if (payload.getGameId() != null && !payload.getGameId().isEmpty()) {
+                                System.out.println("Reconexão automática por IP com sucesso para: " + clientIp);
+                                break; // Aborta fluxo de login
+                            }
+                            
+                            // 2. Se não reconectou e o cliente enviou sonda com nome nulo, avisa que precisa de login!
+                            if (payload.getPlayerName() == null) {
+                                sendMessage(new Protocol(Protocol.Command.NEED_LOGIN));
+                                break;
+                            }
+
+                            // 3. Fluxo normal de login
+                            this.playerName = payload.getPlayerName();
+                            if (payload.getGameId() != null && !payload.getGameId().isEmpty()) {
                                 server.loadGame(payload.getGameId(), this);
                             } else {
                                 server.playerReady(this);
