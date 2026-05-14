@@ -6,15 +6,28 @@ import pt.ua.estga.lp.batalha_naval.util.Storage;
 /**
  * Gere uma partida entre dois jogadores, servindo de árbitro e coordenando as
  * threads dos clientes através da classe de mensagens Protocol.
+ * Implementa tolerância a falhas com reconexão resiliente baseada em IP
+ * e temporizador de 3 minutos.
  */
 public class GameSession {
     private GameState state;
     private ClientHandler handler1;
     private ClientHandler handler2;
 
+    // Atributos para reconexão resiliente
+    private String p1Ip;
+    private String p2Ip;
+    private boolean p1Connected = true;
+    private boolean p2Connected = true;
+    private java.util.Timer disconnectTimer;
+    private int secondsLeft = 180;
+    private int disconnectedPlayerId = -1;
+
     public GameSession(ClientHandler p1, ClientHandler p2, GameState loadedState) {
         this.handler1 = p1;
         this.handler2 = p2;
+        this.p1Ip = p1.getClientIp();
+        this.p2Ip = p2.getClientIp();
 
         if (loadedState != null) {
             this.state = loadedState;
@@ -31,29 +44,27 @@ public class GameSession {
         Protocol welcome1 = new Protocol(Protocol.Command.WELCOME);
         welcome1.setPlayerId(state.getPlayer1().getId());
         welcome1.setGameId(state.getGameId());
-        handler1.sendMessage(welcome1);
+        if (p1Connected) handler1.sendMessage(welcome1);
 
         Protocol welcome2 = new Protocol(Protocol.Command.WELCOME);
         welcome2.setPlayerId(state.getPlayer2().getId());
         welcome2.setGameId(state.getGameId());
-        handler2.sendMessage(welcome2);
+        if (p2Connected) handler2.sendMessage(welcome2);
 
         if (state.getStatus() == GameState.GameStatus.WAITING_PLAYERS) {
             state.setStatus(GameState.GameStatus.PLACING_SHIPS);
             broadcast(new Protocol(Protocol.Command.SETUP));
         } else if (state.getStatus() == GameState.GameStatus.PLAYING) {
-            // Jogo recuperado
-            // Envia tabuleiros nativamente para o Jogador 1
+            // Jogo recuperado do ficheiro
             Protocol r1 = new Protocol(Protocol.Command.RESTORE);
             r1.setMyBoardCells(state.getPlayer1().getMyBoard().getGrid());
             r1.setOpponentBoardView(state.getPlayer1().getOpponentBoardView());
-            handler1.sendMessage(r1);
+            if (p1Connected) handler1.sendMessage(r1);
 
-            // Envia tabuleiros nativamente para o Jogador 2
             Protocol r2 = new Protocol(Protocol.Command.RESTORE);
             r2.setMyBoardCells(state.getPlayer2().getMyBoard().getGrid());
             r2.setOpponentBoardView(state.getPlayer2().getOpponentBoardView());
-            handler2.sendMessage(r2);
+            if (p2Connected) handler2.sendMessage(r2);
 
             Protocol startP = new Protocol(Protocol.Command.START);
             startP.setPlayerId(state.getCurrentPlayerTurn());
@@ -64,11 +75,11 @@ public class GameSession {
     }
 
     /**
-     * Envia objeto Protocol para os dois jogadores.
+     * Envia objeto Protocol para os dois jogadores se estiverem conectados.
      */
     public synchronized void broadcast(Protocol payload) {
-        if (handler1 != null) handler1.sendMessage(payload);
-        if (handler2 != null) handler2.sendMessage(payload);
+        if (handler1 != null && p1Connected) handler1.sendMessage(payload);
+        if (handler2 != null && p2Connected) handler2.sendMessage(payload);
     }
 
     /**
@@ -117,7 +128,11 @@ public class GameSession {
             } else {
                 Protocol waitP = new Protocol(Protocol.Command.WAITING);
                 waitP.setMessage("A aguardar que o adversário coloque os seus navios...");
-                getHandler(playerId).sendMessage(waitP);
+                ClientHandler target = getHandler(playerId);
+                boolean connected = (playerId == state.getPlayer1().getId()) ? p1Connected : p2Connected;
+                if (target != null && connected) {
+                    target.sendMessage(waitP);
+                }
             }
         }
     }
@@ -131,7 +146,8 @@ public class GameSession {
         if (playerId != state.getCurrentPlayerTurn()) {
             Protocol err = new Protocol(Protocol.Command.ERROR);
             err.setMessage("Não é o teu turno!");
-            getHandler(playerId).sendMessage(err);
+            ClientHandler target = getHandler(playerId);
+            if (target != null) target.sendMessage(err);
             return;
         }
 
@@ -143,7 +159,8 @@ public class GameSession {
         if (result == null) {
             Protocol err = new Protocol(Protocol.Command.ERROR);
             err.setMessage("Já disparaste para essa célula!");
-            getHandler(playerId).sendMessage(err);
+            ClientHandler target = getHandler(playerId);
+            if (target != null) target.sendMessage(err);
             return;
         }
 
@@ -183,12 +200,12 @@ public class GameSession {
             Protocol r1 = new Protocol(Protocol.Command.RESTORE);
             r1.setMyBoardCells(state.getPlayer1().getMyBoard().getGrid());
             r1.setOpponentBoardView(state.getPlayer1().getOpponentBoardView());
-            handler1.sendMessage(r1);
+            if (p1Connected) handler1.sendMessage(r1);
 
             Protocol r2 = new Protocol(Protocol.Command.RESTORE);
             r2.setMyBoardCells(state.getPlayer2().getMyBoard().getGrid());
             r2.setOpponentBoardView(state.getPlayer2().getOpponentBoardView());
-            handler2.sendMessage(r2);
+            if (p2Connected) handler2.sendMessage(r2);
         }
 
         if (opponent.getMyBoard().areAllShipsSunk()) {
@@ -215,20 +232,180 @@ public class GameSession {
         broadcast(turnP);
     }
 
+    /**
+     * Gere o evento de desconexão do socket de rede, despoletando o timer resiliente de 3 minutos.
+     */
     public synchronized void handleDisconnect(int playerId) {
-        // TODO na FASE 2: Implementar a reconexão em memória com Timer 3 minutos.
-        if (state.getStatus() != GameState.GameStatus.FINISHED) {
-            System.out.println("Jogador " + playerId + " desconectou-se. A guardar estado...");
-            Storage.saveGame(state);
-            Player opponent = state.getOpponent(playerId);
-            
-            if (opponent != null) {
-                ClientHandler opponentHandler = getHandler(opponent.getId());
-                if (opponentHandler != null) {
-                    Protocol err = new Protocol(Protocol.Command.ERROR);
-                    err.setMessage("Adversário desconectou-se! Jogo guardado com ID: " + state.getGameId());
-                    opponentHandler.sendMessage(err);
+        if (state.getStatus() == GameState.GameStatus.FINISHED) {
+            return;
+        }
+
+        if (playerId == state.getPlayer1().getId()) {
+            p1Connected = false;
+        } else {
+            p2Connected = false;
+        }
+
+        this.disconnectedPlayerId = playerId;
+        System.out.println("Jogador " + playerId + " desconectou-se. A iniciar temporizador resiliente de 3 minutos...");
+        
+        startDisconnectTimer();
+    }
+
+    private synchronized void startDisconnectTimer() {
+        if (disconnectTimer != null) {
+            disconnectTimer.cancel();
+        }
+
+        secondsLeft = 180;
+        disconnectTimer = new java.util.Timer(true);
+        disconnectTimer.scheduleAtFixedRate(new java.util.TimerTask() {
+            @Override
+            public void run() {
+                synchronized (GameSession.this) {
+                    secondsLeft--;
+
+                    Player opponent = state.getOpponent(disconnectedPlayerId);
+                    if (opponent != null) {
+                        ClientHandler oppHandler = getHandler(opponent.getId());
+                        boolean oppConnected = (opponent.getId() == state.getPlayer1().getId()) ? p1Connected : p2Connected;
+                        
+                        if (oppHandler != null && oppConnected) {
+                            Protocol timerPayload = new Protocol(Protocol.Command.DISCONNECT_TIMER);
+                            timerPayload.setTimerSeconds(secondsLeft);
+                            oppHandler.sendMessage(timerPayload);
+                        }
+                    }
+
+                    if (secondsLeft <= 0) {
+                        handleTimeoutLoss();
+                    }
                 }
+            }
+        }, 1000, 1000);
+    }
+
+    private synchronized void cancelDisconnectTimer() {
+        if (disconnectTimer != null) {
+            disconnectTimer.cancel();
+            disconnectTimer = null;
+        }
+    }
+
+    private synchronized void handleTimeoutLoss() {
+        cancelDisconnectTimer();
+        state.setStatus(GameState.GameStatus.FINISHED);
+
+        Player winner = state.getOpponent(disconnectedPlayerId);
+        if (winner != null) {
+            state.setWinnerId(winner.getName());
+            System.out.println("Vitória por abandono! Oponente falhou reconexão de 3 minutos. Vencedor: " + winner.getName());
+
+            Protocol go = new Protocol(Protocol.Command.GAME_OVER);
+            go.setPlayerName(winner.getName());
+            go.setMessage("O adversário falhou a ligação durante mais de 3 minutos. Ganhaste por desistência!");
+
+            ClientHandler winnerHandler = getHandler(winner.getId());
+            boolean connected = (winner.getId() == state.getPlayer1().getId()) ? p1Connected : p2Connected;
+            if (winnerHandler != null && connected) {
+                winnerHandler.sendMessage(go);
+            }
+        }
+    }
+
+    /**
+     * Chamado pelo servidor para atestar se um cliente que regressa tem o mesmo IP de um jogador offline,
+     * restaurando o canal de comunicação.
+     */
+    public synchronized boolean reconnectPlayer(ClientHandler newHandler) {
+        if (state.getStatus() == GameState.GameStatus.FINISHED) {
+            return false;
+        }
+
+        String ip = newHandler.getClientIp();
+
+        // Tenta reconectar como Jogador 1
+        if (!p1Connected && ip.equals(p1Ip)) {
+            cancelDisconnectTimer();
+            this.handler1 = newHandler;
+            this.p1Connected = true;
+            this.p1Ip = newHandler.getClientIp(); // Atualizar em caso de ligeira mutação
+            
+            newHandler.setGameSession(this);
+
+            Protocol welcome = new Protocol(Protocol.Command.WELCOME);
+            welcome.setPlayerId(state.getPlayer1().getId());
+            welcome.setGameId(state.getGameId());
+            newHandler.sendMessage(welcome);
+
+            syncReconnectedPlayer(newHandler, state.getPlayer1());
+            return true;
+        }
+
+        // Tenta reconectar como Jogador 2
+        if (!p2Connected && ip.equals(p2Ip)) {
+            cancelDisconnectTimer();
+            this.handler2 = newHandler;
+            this.p2Connected = true;
+            this.p2Ip = newHandler.getClientIp();
+
+            newHandler.setGameSession(this);
+
+            Protocol welcome = new Protocol(Protocol.Command.WELCOME);
+            welcome.setPlayerId(state.getPlayer2().getId());
+            welcome.setGameId(state.getGameId());
+            newHandler.sendMessage(welcome);
+
+            syncReconnectedPlayer(newHandler, state.getPlayer2());
+            return true;
+        }
+
+        return false;
+    }
+
+    private void syncReconnectedPlayer(ClientHandler newHandler, Player returningPlayer) {
+        System.out.println("Jogador " + returningPlayer.getId() + " reconectado com sucesso. A resincronizar...");
+
+        // 1. Restaurar Tabuleiros
+        Protocol r = new Protocol(Protocol.Command.RESTORE);
+        r.setMyBoardCells(returningPlayer.getMyBoard().getGrid());
+        r.setOpponentBoardView(returningPlayer.getOpponentBoardView());
+        newHandler.sendMessage(r);
+
+        // 2. Restaurar Estado de Jogo
+        if (state.getStatus() == GameState.GameStatus.PLAYING) {
+            Protocol startP = new Protocol(Protocol.Command.START);
+            startP.setPlayerId(state.getCurrentPlayerTurn());
+            newHandler.sendMessage(startP);
+
+            Protocol turnP = new Protocol(Protocol.Command.TURN);
+            turnP.setPlayerId(state.getCurrentPlayerTurn());
+            turnP.setShotsRemaining(state.getShotsRemaining());
+            newHandler.sendMessage(turnP);
+        } else if (state.getStatus() == GameState.GameStatus.PLACING_SHIPS) {
+            newHandler.sendMessage(new Protocol(Protocol.Command.SETUP));
+            if (returningPlayer.isReady()) {
+                Protocol waitP = new Protocol(Protocol.Command.WAITING);
+                waitP.setMessage("A aguardar que o adversário coloque os seus navios...");
+                newHandler.sendMessage(waitP);
+            }
+        }
+
+        // 3. Notificar e fechar timer no adversário
+        Player opponent = state.getOpponent(returningPlayer.getId());
+        if (opponent != null) {
+            ClientHandler oppHandler = getHandler(opponent.getId());
+            boolean oppConnected = (opponent.getId() == state.getPlayer1().getId()) ? p1Connected : p2Connected;
+
+            if (oppHandler != null && oppConnected) {
+                // Enviar -1 instrui o cliente a fechar a contagem visual
+                Protocol hideTimer = new Protocol(Protocol.Command.DISCONNECT_TIMER);
+                hideTimer.setTimerSeconds(-1);
+                oppHandler.sendMessage(hideTimer);
+
+                Protocol alert = new Protocol(Protocol.Command.WAITING);
+                alert.setMessage("O adversário regressou à partida! O jogo continua.");
+                oppHandler.sendMessage(alert);
             }
         }
     }
