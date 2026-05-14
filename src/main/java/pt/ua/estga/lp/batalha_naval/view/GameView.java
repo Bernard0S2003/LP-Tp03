@@ -29,4 +29,6 @@ public interface GameView {
     void onShowTimer(int secondsLeft);
 
     void onHideTimer();
+
+    void onRequestLogin();
 }
