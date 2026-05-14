@@ -38,7 +38,9 @@ public class Cell implements Serializable {
 
     public void setShip(Ship ship) {
         this.ship = ship;
-        this.state = CellState.SHIP;
+        if (ship != null) {
+            this.state = CellState.SHIP;
+        }
     }
     
     public boolean hasShip() {
