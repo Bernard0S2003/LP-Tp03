@@ -211,6 +211,14 @@ public class BattleshipClient {
                     case ERROR:
                         view.showError(payload.getMessage());
                         break;
+                    case DISCONNECT_TIMER:
+                        int seconds = payload.getTimerSeconds();
+                        if (seconds == -1) {
+                            view.onHideTimer();
+                        } else {
+                            view.onShowTimer(seconds);
+                        }
+                        break;
                 }
             } catch (Exception e) {
                 view.showMessage("ERRO LOCAL: " + e.getMessage());
