@@ -46,8 +46,8 @@ public class BattleshipServer {
             GameSession session = new GameSession(p1, p2, null);
             // Configurar jogadores iniciais na GameState
             GameState state = new GameState();
-            state.setPlayer1(new Player(p1.getPlayerId(), "Jogador 1"));
-            state.setPlayer2(new Player(p2.getPlayerId(), "Jogador 2"));
+            state.setPlayer1(new Player(p1.getPlayerId(), p1.getPlayerName()));
+            state.setPlayer2(new Player(p2.getPlayerId(), p2.getPlayerName()));
 
             // Re-instanciar sessão com o state preenchido
             session = new GameSession(p1, p2, state);
