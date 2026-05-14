@@ -249,6 +249,18 @@ public class GameSession {
         this.disconnectedPlayerId = playerId;
         System.out.println("Jogador " + playerId + " desconectou-se. A iniciar temporizador resiliente de 3 minutos...");
         
+        // NOTIFICAÇÃO IMEDIATA AO ADVERSÁRIO
+        Player opponent = state.getOpponent(playerId);
+        if (opponent != null) {
+            ClientHandler oppHandler = getHandler(opponent.getId());
+            boolean oppConnected = (opponent.getId() == state.getPlayer1().getId()) ? p1Connected : p2Connected;
+            if (oppHandler != null && oppConnected) {
+                Protocol warn = new Protocol(Protocol.Command.WAITING);
+                warn.setMessage("⚠️ O adversário perdeu a ligação! A aguardar reconexão (Limite: 3 min)...");
+                oppHandler.sendMessage(warn);
+            }
+        }
+
         startDisconnectTimer();
     }
 
@@ -331,6 +343,8 @@ public class GameSession {
             this.p1Connected = true;
             this.p1Ip = newHandler.getClientIp(); // Atualizar em caso de ligeira mutação
             
+            // RESTAURO DO ID ORIGINAL DO JOGADOR NA NOVA SOCKET
+            newHandler.setPlayerId(state.getPlayer1().getId());
             newHandler.setGameSession(this);
 
             Protocol welcome = new Protocol(Protocol.Command.WELCOME);
@@ -349,6 +363,8 @@ public class GameSession {
             this.p2Connected = true;
             this.p2Ip = newHandler.getClientIp();
 
+            // RESTAURO DO ID ORIGINAL DO JOGADOR NA NOVA SOCKET
+            newHandler.setPlayerId(state.getPlayer2().getId());
             newHandler.setGameSession(this);
 
             Protocol welcome = new Protocol(Protocol.Command.WELCOME);
