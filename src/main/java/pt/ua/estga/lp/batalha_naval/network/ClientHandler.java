@@ -41,6 +41,10 @@ public class ClientHandler implements Runnable {
         this.session = session;
     }
 
+    public String getPlayerName() {
+        return playerName;
+    }
+
     /**
      * Envia um objeto payload do tipo Protocol tipadamente para o cliente.
      */
