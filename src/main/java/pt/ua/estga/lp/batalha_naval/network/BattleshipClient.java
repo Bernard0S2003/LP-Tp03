@@ -2,22 +2,21 @@ package pt.ua.estga.lp.batalha_naval.network;
 
 import pt.ua.estga.lp.batalha_naval.view.GameView;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.Socket;
 
 /**
  * Cliente que se conecta ao servidor. Inicia uma Thread (NetworkListener) para
- * ouvir atualizações.
+ * ouvir atualizações enviadas via instâncias de Protocol.
  */
 public class BattleshipClient {
     private String serverIp;
     private int serverPort;
     private Socket socket;
-    private PrintWriter out;
-    private BufferedReader in;
+    private ObjectOutputStream out;
+    private ObjectInputStream in;
     private GameView view;
 
     private int myId;
@@ -45,19 +44,24 @@ public class BattleshipClient {
     public boolean connect(String playerName, String optionalGameIdToLoad) {
         try {
             socket = new Socket(serverIp, serverPort);
-            out = new PrintWriter(socket.getOutputStream(), true);
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            // IMPORTANTE: Inicializar ObjectOutputStream e dar flush ANTES do InputStream
+            out = new ObjectOutputStream(socket.getOutputStream());
+            out.flush();
+            in = new ObjectInputStream(socket.getInputStream());
 
             // Iniciar a Thread que ouve o servidor
             new Thread(new NetworkListener()).start();
 
-            // Enviar comando inicial combinando o JOIN com o LOAD opcional num único
-            // comando atómico
+            // Enviar payload de JOIN
+            Protocol joinPayload = new Protocol(Protocol.Command.JOIN);
+            joinPayload.setPlayerName(playerName);
             if (optionalGameIdToLoad != null && !optionalGameIdToLoad.isEmpty()) {
-                out.println(Protocol.JOIN + " " + playerName + " " + optionalGameIdToLoad);
-            } else {
-                out.println(Protocol.JOIN + " " + playerName);
+                joinPayload.setGameId(optionalGameIdToLoad);
             }
+            
+            out.writeObject(joinPayload);
+            out.flush();
+            out.reset();
 
             return true;
         } catch (IOException e) {
@@ -67,58 +71,84 @@ public class BattleshipClient {
     }
 
     public void sendPlacement(String placementData) {
-        out.println(Protocol.PLACE + " " + placementData);
+        try {
+            Protocol p = new Protocol(Protocol.Command.PLACE);
+            p.setPlacementData(placementData);
+            out.writeObject(p);
+            out.flush();
+            out.reset();
+        } catch (IOException e) {
+            view.showError("Erro ao enviar barcos: " + e.getMessage());
+        }
     }
 
     public void shoot(int x, int y) {
-        out.println(Protocol.SHOOT + " " + x + " " + y);
+        try {
+            Protocol p = new Protocol(Protocol.Command.SHOOT);
+            p.setX(x);
+            p.setY(y);
+            out.writeObject(p);
+            out.flush();
+            out.reset();
+        } catch (IOException e) {
+            view.showError("Erro ao efetuar disparo: " + e.getMessage());
+        }
     }
 
     public void requestSave() {
-        out.println(Protocol.SAVE_REQUEST);
+        try {
+            Protocol p = new Protocol(Protocol.Command.SAVE_REQUEST);
+            out.writeObject(p);
+            out.flush();
+            out.reset();
+        } catch (IOException e) {
+            view.showError("Erro ao pedir save do jogo: " + e.getMessage());
+        }
     }
 
     /**
-     * Thread que fica eternamente à escuta de mensagens do servidor para atualizar
-     * a UI.
+     * Thread que fica eternamente à escuta de objetos vindos do servidor para atualizar a UI.
      */
     private class NetworkListener implements Runnable {
         @Override
         public void run() {
             try {
-                String response;
-                while ((response = in.readLine()) != null) {
-                    processServerMessage(response);
+                Object inputObj;
+                while ((inputObj = in.readObject()) != null) {
+                    if (inputObj instanceof Protocol payload) {
+                        processServerMessage(payload);
+                    }
                 }
-            } catch (IOException e) {
+            } catch (IOException | ClassNotFoundException e) {
                 view.showError("Conexão perdida com o servidor.");
             }
         }
 
-        private void processServerMessage(String msg) {
+        private void processServerMessage(Protocol payload) {
             try {
-                String[] parts = msg.split(" ");
-                String cmd = parts[0];
-
-                switch (cmd) {
-                    case Protocol.WELCOME:
-                        myId = Integer.parseInt(parts[1]);
-                        gameId = parts[2];
+                switch (payload.getCommand()) {
+                    case WELCOME:
+                        myId = payload.getPlayerId();
+                        gameId = payload.getGameId();
                         view.showMessage("Conectado! Tu és o Jogador " + myId + ". Jogo ID: " + gameId);
                         break;
-                    case Protocol.WAITING:
-                        view.showMessage("A aguardar o oponente...");
+                    case WAITING:
+                        if (payload.getMessage() != null) {
+                            view.showMessage(payload.getMessage());
+                        } else {
+                            view.showMessage("A aguardar o oponente...");
+                        }
                         break;
-                    case Protocol.SETUP:
+                    case SETUP:
                         view.requestShipPlacement();
                         break;
-                    case Protocol.START:
-                        int firstPlayerId = Integer.parseInt(parts[1]);
+                    case START:
+                        int firstPlayerId = payload.getPlayerId();
                         view.onGameStart(firstPlayerId);
                         break;
-                    case Protocol.TURN:
-                        int currentPlayerId = Integer.parseInt(parts[1]);
-                        int shots = Integer.parseInt(parts[2]);
+                    case TURN:
+                        int currentPlayerId = payload.getPlayerId();
+                        int shots = payload.getShotsRemaining();
                         if (currentPlayerId == myId) {
                             view.onTurnStart(shots);
                         } else {
@@ -126,19 +156,17 @@ public class BattleshipClient {
                             view.showMessage("Turno do adversário. Aguarda...");
                         }
                         break;
-                    case Protocol.SHOT_RES:
-                        // SHOT_RESULT <PlayerID> <X> <Y> <RESULT> [INFO]
-                        int shooter = Integer.parseInt(parts[1]);
-                        int x = Integer.parseInt(parts[2]);
-                        int y = Integer.parseInt(parts[3]);
-                        String res = parts[4];
-                        String info = parts.length > 5 ? parts[5] : "";
+                    case SHOT_RES:
+                        int shooter = payload.getPlayerId();
+                        int x = payload.getX();
+                        int y = payload.getY();
+                        String res = payload.getShotResult();
+                        String info = payload.getInfo() != null ? payload.getInfo() : "";
 
-                        // não pode ficar desta forma, rever
-                        pt.ua.estga.lp.batalha_naval.model.Cell.CellState shotState = (res.startsWith(Protocol.RES_HIT)
-                                || res.startsWith(Protocol.RES_SUNK))
-                                        ? pt.ua.estga.lp.batalha_naval.model.Cell.CellState.HIT
-                                        : pt.ua.estga.lp.batalha_naval.model.Cell.CellState.MISS;
+                        pt.ua.estga.lp.batalha_naval.model.Cell.CellState shotState = 
+                            (res.equals(Protocol.RES_HIT) || res.equals(Protocol.RES_SUNK))
+                                ? pt.ua.estga.lp.batalha_naval.model.Cell.CellState.HIT
+                                : pt.ua.estga.lp.batalha_naval.model.Cell.CellState.MISS;
 
                         if (shooter == myId) {
                             view.showMessage("O teu tiro em (" + x + "," + y + "): " + res + " " + info);
@@ -150,50 +178,38 @@ public class BattleshipClient {
                             view.updateMyBoard(myLocalGrid);
                         }
                         break;
-                    case Protocol.RESTORE:
-                        String myBoardStr = parts[1];
-                        String oppBoardStr = parts[2];
+                    case RESTORE:
+                        // Receção dos tabuleiros e grids nativamente como objetos estruturados
+                        pt.ua.estga.lp.batalha_naval.model.Cell[][] myBoardRestored = payload.getMyBoardCells();
+                        pt.ua.estga.lp.batalha_naval.model.Cell.CellState[][] oppViewRestored = payload.getOpponentBoardView();
 
-                        int idx = 0;
-                        for (int i = 0; i < 10; i++) {
-                            for (int j = 0; j < 10; j++) {
-                                char m = myBoardStr.charAt(idx);
-                                if (m == 'S')
-                                    myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.SHIP);
-                                else if (m == '*')
-                                    myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.SUNK);
-                                else if (m == 'X')
-                                    myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.HIT);
-                                else if (m == 'O')
-                                    myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.MISS);
-                                else
-                                    myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.WATER);
-
-                                char o = oppBoardStr.charAt(idx);
-                                if (o == '*')
-                                    opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.SUNK;
-                                else if (o == 'X')
-                                    opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.HIT;
-                                else if (o == 'O')
-                                    opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.MISS;
-                                else
-                                    opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.WATER;
-
-                                idx++;
+                        if (myBoardRestored != null) {
+                            for (int i = 0; i < 10; i++) {
+                                for (int j = 0; j < 10; j++) {
+                                    myLocalGrid[i][j].setState(myBoardRestored[i][j].getState());
+                                    myLocalGrid[i][j].setShip(myBoardRestored[i][j].getShip());
+                                }
+                            }
+                        }
+                        if (oppViewRestored != null) {
+                            for (int i = 0; i < 10; i++) {
+                                for (int j = 0; j < 10; j++) {
+                                    opponentLocalGrid[i][j] = oppViewRestored[i][j];
+                                }
                             }
                         }
                         view.updateMyBoard(myLocalGrid);
                         view.updateOpponentBoard(opponentLocalGrid);
                         break;
-                    case Protocol.GAME_OVER:
-                        String winner = (parts[1]);
+                    case GAME_OVER:
+                        String winner = payload.getPlayerName();
                         view.onGameOver(winner);
                         break;
-                    case Protocol.SAVED:
-                        view.showMessage("Jogo guardado com sucesso! ID: " + parts[1]);
+                    case SAVED:
+                        view.showMessage("Jogo guardado com sucesso! ID: " + payload.getGameId());
                         break;
-                    case Protocol.ERROR:
-                        view.showError(msg.substring(msg.indexOf(" ") + 1));
+                    case ERROR:
+                        view.showError(payload.getMessage());
                         break;
                 }
             } catch (Exception e) {
