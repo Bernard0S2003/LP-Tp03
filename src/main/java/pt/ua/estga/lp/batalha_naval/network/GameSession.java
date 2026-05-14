@@ -5,7 +5,7 @@ import pt.ua.estga.lp.batalha_naval.util.Storage;
 
 /**
  * Gere uma partida entre dois jogadores, servindo de árbitro e coordenando as
- * threads dos clientes.
+ * threads dos clientes através da classe de mensagens Protocol.
  */
 public class GameSession {
     private GameState state;
@@ -28,72 +28,47 @@ public class GameSession {
     }
 
     public synchronized void start() {
-        handler1.sendMessage(Protocol.WELCOME + " " + state.getPlayer1().getId() + " " + state.getGameId());
-        handler2.sendMessage(Protocol.WELCOME + " " + state.getPlayer2().getId() + " " + state.getGameId());
+        Protocol welcome1 = new Protocol(Protocol.Command.WELCOME);
+        welcome1.setPlayerId(state.getPlayer1().getId());
+        welcome1.setGameId(state.getGameId());
+        handler1.sendMessage(welcome1);
+
+        Protocol welcome2 = new Protocol(Protocol.Command.WELCOME);
+        welcome2.setPlayerId(state.getPlayer2().getId());
+        welcome2.setGameId(state.getGameId());
+        handler2.sendMessage(welcome2);
 
         if (state.getStatus() == GameState.GameStatus.WAITING_PLAYERS) {
             state.setStatus(GameState.GameStatus.PLACING_SHIPS);
-            broadcast(Protocol.SETUP);
+            broadcast(new Protocol(Protocol.Command.SETUP));
         } else if (state.getStatus() == GameState.GameStatus.PLAYING) {
             // Jogo recuperado
-            // Envia para o Jogador 1
-            handler1.sendMessage(Protocol.RESTORE + " " + serializeBoard(state.getPlayer1().getMyBoard()) + " "
-                    + serializeOpponentView(state.getPlayer1().getOpponentBoardView()));
-            // Envia para o Jogador 2
-            handler2.sendMessage(Protocol.RESTORE + " " + serializeBoard(state.getPlayer2().getMyBoard()) + " "
-                    + serializeOpponentView(state.getPlayer2().getOpponentBoardView()));
+            // Envia tabuleiros nativamente para o Jogador 1
+            Protocol r1 = new Protocol(Protocol.Command.RESTORE);
+            r1.setMyBoardCells(state.getPlayer1().getMyBoard().getGrid());
+            r1.setOpponentBoardView(state.getPlayer1().getOpponentBoardView());
+            handler1.sendMessage(r1);
 
-            broadcast(Protocol.START + " " + state.getCurrentPlayerTurn());
+            // Envia tabuleiros nativamente para o Jogador 2
+            Protocol r2 = new Protocol(Protocol.Command.RESTORE);
+            r2.setMyBoardCells(state.getPlayer2().getMyBoard().getGrid());
+            r2.setOpponentBoardView(state.getPlayer2().getOpponentBoardView());
+            handler2.sendMessage(r2);
+
+            Protocol startP = new Protocol(Protocol.Command.START);
+            startP.setPlayerId(state.getCurrentPlayerTurn());
+            broadcast(startP);
+            
             broadcastTurn();
         }
     }
 
-    // Alterar (provavelmente nao vamos usar isto )
-    private String serializeBoard(Board board) {
-        StringBuilder sb = new StringBuilder(100);
-        for (int i = 0; i < Board.SIZE; i++) {
-            for (int j = 0; j < Board.SIZE; j++) {
-                Cell.CellState st = board.getCell(i, j).getState();
-                if (st == Cell.CellState.SHIP)
-                    sb.append('S');
-                else if (st == Cell.CellState.SUNK)
-                    sb.append('*');
-                else if (st == Cell.CellState.HIT)
-                    sb.append('X');
-                else if (st == Cell.CellState.MISS)
-                    sb.append('O');
-                else
-                    sb.append('~');
-            }
-        }
-        return sb.toString();
-    }
-
-    // Alterar (provavelmente nao vamos usar isto )
-    private String serializeOpponentView(Cell.CellState[][] view) {
-        StringBuilder sb = new StringBuilder(100);
-        for (int i = 0; i < Board.SIZE; i++) {
-            for (int j = 0; j < Board.SIZE; j++) {
-                Cell.CellState st = view[i][j];
-                if (st == Cell.CellState.SUNK)
-                    sb.append('*');
-                else if (st == Cell.CellState.HIT)
-                    sb.append('X');
-                else if (st == Cell.CellState.MISS)
-                    sb.append('O');
-                else
-                    sb.append('~');
-            }
-        }
-        return sb.toString();
-    }
-
     /**
-     * Envia mensagem para os dois jogadores.
+     * Envia objeto Protocol para os dois jogadores.
      */
-    public synchronized void broadcast(String message) {
-        handler1.sendMessage(message);
-        handler2.sendMessage(message);
+    public synchronized void broadcast(Protocol payload) {
+        if (handler1 != null) handler1.sendMessage(payload);
+        if (handler2 != null) handler2.sendMessage(payload);
     }
 
     /**
@@ -117,8 +92,7 @@ public class GameSession {
                         if (t.getSize() == size) {
                             type = t;
                             break;
-                        } // Pode haver mais do que 1 do mesmo tamanho, mas a lógica de Hits no backend
-                          // lida bem com isto.
+                        }
                     }
                     if (type != null) {
                         p.getMyBoard().placeShip(new Ship(type), x, y, horiz);
@@ -135,11 +109,15 @@ public class GameSession {
                 int firstPlayer = Math.random() < 0.5 ? state.getPlayer1().getId() : state.getPlayer2().getId();
                 state.setCurrentPlayerTurn(firstPlayer);
 
-                broadcast(Protocol.START + " " + firstPlayer);
+                Protocol startP = new Protocol(Protocol.Command.START);
+                startP.setPlayerId(firstPlayer);
+                broadcast(startP);
+                
                 broadcastTurn();
             } else {
-                getHandler(playerId)
-                        .sendMessage(Protocol.WAITING + " A aguardar que o adversário coloque os seus navios...");
+                Protocol waitP = new Protocol(Protocol.Command.WAITING);
+                waitP.setMessage("A aguardar que o adversário coloque os seus navios...");
+                getHandler(playerId).sendMessage(waitP);
             }
         }
     }
@@ -151,7 +129,9 @@ public class GameSession {
         if (state.getStatus() != GameState.GameStatus.PLAYING)
             return;
         if (playerId != state.getCurrentPlayerTurn()) {
-            getHandler(playerId).sendMessage(Protocol.ERROR + " Não é o teu turno!");
+            Protocol err = new Protocol(Protocol.Command.ERROR);
+            err.setMessage("Não é o teu turno!");
+            getHandler(playerId).sendMessage(err);
             return;
         }
 
@@ -161,13 +141,14 @@ public class GameSession {
         String result = opponent.getMyBoard().receiveShot(x, y);
 
         if (result == null) {
-            getHandler(playerId).sendMessage(Protocol.ERROR + " Já disparaste para essa célula!");
+            Protocol err = new Protocol(Protocol.Command.ERROR);
+            err.setMessage("Já disparaste para essa célula!");
+            getHandler(playerId).sendMessage(err);
             return;
         }
 
         // Atualiza a vista do atirador
         if (result.startsWith(Protocol.RES_SUNK)) {
-            // Atualizar toda a visão do oponente para SUNK baseando-se no tabuleiro real
             for (int r = 0; r < Board.SIZE; r++) {
                 for (int c = 0; c < Board.SIZE; c++) {
                     if (opponent.getMyBoard().getCell(r, c).getState() == Cell.CellState.SUNK) {
@@ -181,21 +162,41 @@ public class GameSession {
             shooter.updateOpponentBoardView(x, y, Cell.CellState.MISS);
         }
 
-        // Envia o resultado do tiro para a consola/log
-        broadcast(Protocol.SHOT_RES + " " + playerId + " " + x + " " + y + " " + result);
+        // Envia o resultado do tiro nativamente no payload
+        Protocol shotRes = new Protocol(Protocol.Command.SHOT_RES);
+        shotRes.setPlayerId(playerId);
+        shotRes.setX(x);
+        shotRes.setY(y);
 
-        // Se afundou um navio, força a atualização completa das matrizes visuais nos
-        // dois ecrãs (para a cor Cinzenta assumir efeito em todo o navio)
+        if (result.contains(" ")) {
+            shotRes.setShotResult(result.substring(0, result.indexOf(" ")));
+            shotRes.setInfo(result.substring(result.indexOf(" ") + 1));
+        } else {
+            shotRes.setShotResult(result);
+            shotRes.setInfo("");
+        }
+        
+        broadcast(shotRes);
+
+        // Se afundou um navio, força a atualização completa das matrizes enviando diretamente objetos
         if (result.startsWith(Protocol.RES_SUNK)) {
-            handler1.sendMessage(Protocol.RESTORE + " " + serializeBoard(state.getPlayer1().getMyBoard()) + " "
-                    + serializeOpponentView(state.getPlayer1().getOpponentBoardView()));
-            handler2.sendMessage(Protocol.RESTORE + " " + serializeBoard(state.getPlayer2().getMyBoard()) + " "
-                    + serializeOpponentView(state.getPlayer2().getOpponentBoardView()));
+            Protocol r1 = new Protocol(Protocol.Command.RESTORE);
+            r1.setMyBoardCells(state.getPlayer1().getMyBoard().getGrid());
+            r1.setOpponentBoardView(state.getPlayer1().getOpponentBoardView());
+            handler1.sendMessage(r1);
+
+            Protocol r2 = new Protocol(Protocol.Command.RESTORE);
+            r2.setMyBoardCells(state.getPlayer2().getMyBoard().getGrid());
+            r2.setOpponentBoardView(state.getPlayer2().getOpponentBoardView());
+            handler2.sendMessage(r2);
         }
 
         if (opponent.getMyBoard().areAllShipsSunk()) {
             state.setWinnerId(state.getPlayerById(playerId).getName());
-            broadcast(Protocol.GAME_OVER + " " + state.getPlayerById(playerId).getName());
+            
+            Protocol go = new Protocol(Protocol.Command.GAME_OVER);
+            go.setPlayerName(state.getPlayerById(playerId).getName());
+            broadcast(go);
             return;
         }
 
@@ -208,26 +209,35 @@ public class GameSession {
     }
 
     private void broadcastTurn() {
-        broadcast(Protocol.TURN + " " + state.getCurrentPlayerTurn() + " " + state.getShotsRemaining());
+        Protocol turnP = new Protocol(Protocol.Command.TURN);
+        turnP.setPlayerId(state.getCurrentPlayerTurn());
+        turnP.setShotsRemaining(state.getShotsRemaining());
+        broadcast(turnP);
     }
 
     public synchronized void handleDisconnect(int playerId) {
-        // Manter historico de id atribuido quando o jogador volta a conectar-se caso
-        // tenha perdido conexão
-        // O oponente fica a aguardar x tempo pela reconexão
-        // Alterar a forma como o jogo é terminado
+        // TODO na FASE 2: Implementar a reconexão em memória com Timer 3 minutos.
         if (state.getStatus() != GameState.GameStatus.FINISHED) {
             System.out.println("Jogador " + playerId + " desconectou-se. A guardar estado...");
             Storage.saveGame(state);
             Player opponent = state.getOpponent(playerId);
-            getHandler(opponent.getId()).sendMessage(
-                    Protocol.ERROR + " Adversário desconectou-se! Jogo guardado com ID: " + state.getGameId());
+            
+            if (opponent != null) {
+                ClientHandler opponentHandler = getHandler(opponent.getId());
+                if (opponentHandler != null) {
+                    Protocol err = new Protocol(Protocol.Command.ERROR);
+                    err.setMessage("Adversário desconectou-se! Jogo guardado com ID: " + state.getGameId());
+                    opponentHandler.sendMessage(err);
+                }
+            }
         }
     }
 
     public synchronized void handleSaveRequest() {
         Storage.saveGame(state);
-        broadcast(Protocol.SAVED + " " + state.getGameId());
+        Protocol savedP = new Protocol(Protocol.Command.SAVED);
+        savedP.setGameId(state.getGameId());
+        broadcast(savedP);
     }
 
     private ClientHandler getHandler(int playerId) {
