@@ -17,6 +17,7 @@ public class GUIView extends JFrame implements GameView {
     private JPanel myBoardPanel;
     private boolean isMyTurn = false;
     private int shotsLeft = 0;
+    private JLabel timerLabel;
 
     // Estado da colocação de barcos
     private int[] shipsToPlace = { 5, 4, 3, 3, 2, 2, 2, 1, 1, 1, 1 };
@@ -102,6 +103,11 @@ public class GUIView extends JFrame implements GameView {
 
         // Menu top
         JPanel topPanel = new JPanel(new FlowLayout());
+        timerLabel = new JLabel("");
+        timerLabel.setForeground(Color.RED);
+        timerLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
+        topPanel.add(timerLabel);
+
         JButton btnSave = new JButton("Gravar Jogo");
         btnSave.addActionListener(e -> {
             if (client != null)
@@ -196,17 +202,11 @@ public class GUIView extends JFrame implements GameView {
         setVisible(true);
         requestFocus();
 
-        String name = JOptionPane.showInputDialog(this, "Introduz o teu Nome:");
-        if (name == null || name.trim().isEmpty())
-            System.exit(0);
-
-        String idToLoad = JOptionPane.showInputDialog(this,
-                "Deixa em branco para NOVO JOGO, ou insere o ID do jogo a carregar:");
-
+        // Envia apenas a sonda inicial baseada em IP (dados nulos)
         this.client = new BattleshipClient(ip, port, this);
-        if (!client.connect(name, idToLoad)) {
+        if (!client.connect(null, null)) {
             JOptionPane.showMessageDialog(this, "Falha ao ligar ao servidor em " + ip + ":" + port
-                    + ".\nVerifique se o Servidor já está a correr noutra consola!");
+                    + ".\nVerifique se o Servidor já está a correr!");
             System.exit(0);
         }
     }
@@ -317,5 +317,39 @@ public class GUIView extends JFrame implements GameView {
         this.isPlacingPhase = true;
         showMessage("Início do Jogo! Coloque os seus navios no Tabuleiro da esquerda.");
         showMessage("Navio atual: " + shipsToPlace[currentShipIndex] + " casas. (CLIQUE DIREITO = Rodar)");
+    }
+
+    @Override
+    public void onShowTimer(int secondsLeft) {
+        SwingUtilities.invokeLater(() -> {
+            int min = secondsLeft / 60;
+            int sec = secondsLeft % 60;
+            timerLabel.setText(String.format(" ⚠️ ADVERSÁRIO DESCONECTADO! JANELA DE RECONEXÃO: %02d:%02d ", min, sec));
+        });
+    }
+
+    @Override
+    public void onHideTimer() {
+        SwingUtilities.invokeLater(() -> {
+            timerLabel.setText("");
+        });
+    }
+
+    @Override
+    public void onRequestLogin() {
+        SwingUtilities.invokeLater(() -> {
+            // Ocultar temporariamente a janela principal para pedir credenciais à frente
+            String name = JOptionPane.showInputDialog(this, "Introduz o teu Nome de Jogador:");
+            if (name == null || name.trim().isEmpty()) {
+                System.exit(0);
+            }
+
+            String idToLoad = JOptionPane.showInputDialog(this,
+                    "Deixa em branco para NOVO JOGO, ou insere o ID do jogo a carregar:");
+
+            if (client != null) {
+                client.sendJoin(name, idToLoad);
+            }
+        });
     }
 }

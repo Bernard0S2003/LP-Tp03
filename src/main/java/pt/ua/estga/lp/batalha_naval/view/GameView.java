@@ -25,4 +25,10 @@ public interface GameView {
     void onGameOver(String winnerName);
 
     void requestShipPlacement();
+
+    void onShowTimer(int secondsLeft);
+
+    void onHideTimer();
+
+    void onRequestLogin();
 }
