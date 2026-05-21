@@ -4,17 +4,16 @@ import pt.ua.estga.lp.batalha_naval.model.*;
 import pt.ua.estga.lp.batalha_naval.util.Storage;
 
 /**
- * Gere uma partida entre dois jogadores, servindo de árbitro e coordenando as
- * threads dos clientes.
+ * Gerir a partida entre 2 jogadores
  */
 public class GameSession {
     private GameState state;
     private ClientHandler handler1;
     private ClientHandler handler2;
 
-    public GameSession(ClientHandler p1, ClientHandler p2, GameState loadedState) {
-        this.handler1 = p1;
-        this.handler2 = p2;
+    public GameSession(ClientHandler player1, ClientHandler player2, GameState loadedState) {
+        this.handler1 = player1;
+        this.handler2 = player2;
 
         if (loadedState != null) {
             this.state = loadedState;
@@ -23,8 +22,8 @@ public class GameSession {
         }
 
         // Configura as referências bidirecionais
-        p1.setGameSession(this);
-        p2.setGameSession(this);
+        player1.setGameSession(this);
+        player2.setGameSession(this);
     }
 
     public synchronized void start() {

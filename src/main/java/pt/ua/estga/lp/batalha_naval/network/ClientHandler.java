@@ -12,8 +12,8 @@ import java.net.Socket;
 
 public class ClientHandler implements Runnable {
     private Socket socket;
-    private BufferedReader in;
-    private PrintWriter out;
+    private BufferedReader input;
+    private PrintWriter output;
     private int playerId;
     private String playerName;
     private GameSession session;
@@ -24,11 +24,15 @@ public class ClientHandler implements Runnable {
         this.server = server;
         this.playerId = playerId;
         try {
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            out = new PrintWriter(socket.getOutputStream(), true);
+            input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            output = new PrintWriter(socket.getOutputStream(), true);
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public String getPlayerName() {
+        return playerName;
     }
 
     public int getPlayerId() {
@@ -40,8 +44,8 @@ public class ClientHandler implements Runnable {
     }
 
     public void sendMessage(String message) {
-        if (out != null) {
-            out.println(message);
+        if (output != null) {
+            output.println(message);
         }
     }
 
@@ -49,7 +53,7 @@ public class ClientHandler implements Runnable {
     public void run() {
         try {
             String inputLine;
-            while ((inputLine = in.readLine()) != null) {
+            while ((inputLine = input.readLine()) != null) {
                 System.out.println("Recebido do Cliente " + playerId + ": " + inputLine);
                 String[] parts = inputLine.split(" ");
                 String command = parts[0];

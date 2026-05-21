@@ -44,6 +44,7 @@ public class Board implements Serializable {
      * @return true se foi possível colocar o navio, false caso contrário
      *         (sobreposição ou fora dos limites).
      */
+
     public boolean placeShip(Ship ship, int x, int y, boolean horizontal) {
         if (!canPlaceShip(ship.getSize(), x, y, horizontal)) {
             return false;

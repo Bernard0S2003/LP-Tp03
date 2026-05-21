@@ -8,6 +8,8 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 
+import pt.ua.estga.lp.batalha_naval.model.Cell;
+
 /**
  * Cliente que se conecta ao servidor. Inicia uma Thread (NetworkListener) para
  * ouvir atualizações.
@@ -16,15 +18,15 @@ public class BattleshipClient {
     private String serverIp;
     private int serverPort;
     private Socket socket;
-    private PrintWriter out;
-    private BufferedReader in;
+    private PrintWriter output;
+    private BufferedReader input;
     private GameView view;
 
     private int myId;
     private String gameId;
 
-    private pt.ua.estga.lp.batalha_naval.model.Cell[][] myLocalGrid;
-    private pt.ua.estga.lp.batalha_naval.model.Cell.CellState[][] opponentLocalGrid;
+    private Cell[][] myLocalGrid;
+    private Cell.CellState[][] opponentLocalGrid;
 
     public BattleshipClient(String serverIp, int serverPort, GameView view) {
         this.serverIp = serverIp;
@@ -32,12 +34,12 @@ public class BattleshipClient {
         this.view = view;
 
         // Inicializar matrizes locais para simular o estado e alimentar as vistas
-        myLocalGrid = new pt.ua.estga.lp.batalha_naval.model.Cell[10][10];
-        opponentLocalGrid = new pt.ua.estga.lp.batalha_naval.model.Cell.CellState[10][10];
+        myLocalGrid = new Cell[10][10];
+        opponentLocalGrid = new Cell.CellState[10][10];
         for (int i = 0; i < 10; i++) {
             for (int j = 0; j < 10; j++) {
-                myLocalGrid[i][j] = new pt.ua.estga.lp.batalha_naval.model.Cell();
-                opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.WATER;
+                myLocalGrid[i][j] = new Cell();
+                opponentLocalGrid[i][j] = Cell.CellState.WATER;
             }
         }
     }
@@ -45,8 +47,8 @@ public class BattleshipClient {
     public boolean connect(String playerName, String optionalGameIdToLoad) {
         try {
             socket = new Socket(serverIp, serverPort);
-            out = new PrintWriter(socket.getOutputStream(), true);
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            output = new PrintWriter(socket.getOutputStream(), true);
+            input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
             // Iniciar a Thread que ouve o servidor
             new Thread(new NetworkListener()).start();
@@ -54,9 +56,9 @@ public class BattleshipClient {
             // Enviar comando inicial combinando o JOIN com o LOAD opcional num único
             // comando atómico
             if (optionalGameIdToLoad != null && !optionalGameIdToLoad.isEmpty()) {
-                out.println(Protocol.JOIN + " " + playerName + " " + optionalGameIdToLoad);
+                output.println(Protocol.JOIN + " " + playerName + " " + optionalGameIdToLoad);
             } else {
-                out.println(Protocol.JOIN + " " + playerName);
+                output.println(Protocol.JOIN + " " + playerName);
             }
 
             return true;
@@ -67,27 +69,26 @@ public class BattleshipClient {
     }
 
     public void sendPlacement(String placementData) {
-        out.println(Protocol.PLACE + " " + placementData);
+        output.println(Protocol.PLACE + " " + placementData);
     }
 
     public void shoot(int x, int y) {
-        out.println(Protocol.SHOOT + " " + x + " " + y);
+        output.println(Protocol.SHOOT + " " + x + " " + y);
     }
 
     public void requestSave() {
-        out.println(Protocol.SAVE_REQUEST);
+        output.println(Protocol.SAVE_REQUEST);
     }
 
     /**
-     * Thread que fica eternamente à escuta de mensagens do servidor para atualizar
-     * a UI.
+     * Thread fica sempre à escuta de mensagens do servidor para atualizar a UI.
      */
     private class NetworkListener implements Runnable {
         @Override
         public void run() {
             try {
                 String response;
-                while ((response = in.readLine()) != null) {
+                while ((response = input.readLine()) != null) {
                     processServerMessage(response);
                 }
             } catch (IOException e) {
@@ -98,9 +99,9 @@ public class BattleshipClient {
         private void processServerMessage(String msg) {
             try {
                 String[] parts = msg.split(" ");
-                String cmd = parts[0];
+                String command = parts[0];
 
-                switch (cmd) {
+                switch (command) {
                     case Protocol.WELCOME:
                         myId = Integer.parseInt(parts[1]);
                         gameId = parts[2];
@@ -134,11 +135,10 @@ public class BattleshipClient {
                         String res = parts[4];
                         String info = parts.length > 5 ? parts[5] : "";
 
-                        // não pode ficar desta forma, rever
-                        pt.ua.estga.lp.batalha_naval.model.Cell.CellState shotState = (res.startsWith(Protocol.RES_HIT)
+                        Cell.CellState shotState = (res.startsWith(Protocol.RES_HIT)
                                 || res.startsWith(Protocol.RES_SUNK))
-                                        ? pt.ua.estga.lp.batalha_naval.model.Cell.CellState.HIT
-                                        : pt.ua.estga.lp.batalha_naval.model.Cell.CellState.MISS;
+                                        ? Cell.CellState.HIT
+                                        : Cell.CellState.MISS;
 
                         if (shooter == myId) {
                             view.showMessage("O teu tiro em (" + x + "," + y + "): " + res + " " + info);
@@ -159,25 +159,25 @@ public class BattleshipClient {
                             for (int j = 0; j < 10; j++) {
                                 char m = myBoardStr.charAt(idx);
                                 if (m == 'S')
-                                    myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.SHIP);
+                                    myLocalGrid[i][j].setState(Cell.CellState.SHIP);
                                 else if (m == '*')
-                                    myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.SUNK);
+                                    myLocalGrid[i][j].setState(Cell.CellState.SUNK);
                                 else if (m == 'X')
-                                    myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.HIT);
+                                    myLocalGrid[i][j].setState(Cell.CellState.HIT);
                                 else if (m == 'O')
-                                    myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.MISS);
+                                    myLocalGrid[i][j].setState(Cell.CellState.MISS);
                                 else
-                                    myLocalGrid[i][j].setState(pt.ua.estga.lp.batalha_naval.model.Cell.CellState.WATER);
+                                    myLocalGrid[i][j].setState(Cell.CellState.WATER);
 
                                 char o = oppBoardStr.charAt(idx);
                                 if (o == '*')
-                                    opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.SUNK;
+                                    opponentLocalGrid[i][j] = Cell.CellState.SUNK;
                                 else if (o == 'X')
-                                    opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.HIT;
+                                    opponentLocalGrid[i][j] = Cell.CellState.HIT;
                                 else if (o == 'O')
-                                    opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.MISS;
+                                    opponentLocalGrid[i][j] = Cell.CellState.MISS;
                                 else
-                                    opponentLocalGrid[i][j] = pt.ua.estga.lp.batalha_naval.model.Cell.CellState.WATER;
+                                    opponentLocalGrid[i][j] = Cell.CellState.WATER;
 
                                 idx++;
                             }
