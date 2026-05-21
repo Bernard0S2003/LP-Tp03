@@ -1,7 +1,6 @@
 package pt.ua.estga.lp.batalha_naval;
 
 import pt.ua.estga.lp.batalha_naval.network.BattleshipServer;
-import pt.ua.estga.lp.batalha_naval.network.BattleshipClient;
 import pt.ua.estga.lp.batalha_naval.view.GUIView;
 
 import javax.swing.*;
@@ -18,7 +17,7 @@ public class Batalha_Naval {
         Scanner scanner = new Scanner(System.in);
         System.out.print("Opção: ");
         int opt = scanner.nextInt();
-
+        scanner.close();
         switch (opt) {
             case 1:
                 BattleshipServer server = new BattleshipServer();

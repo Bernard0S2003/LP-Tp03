@@ -117,30 +117,40 @@ public class GUIView extends JFrame implements GameView {
         add(topPanel, BorderLayout.NORTH);
     }
 
-    private void drawPreview(int r, int c, boolean show) {
+    private void drawPreview(int x, int y, boolean show) {
         if (currentShipIndex >= shipsToPlace.length)
             return;
         int size = shipsToPlace[currentShipIndex];
-        boolean valid = canPlaceLocal(size, r, c, horizontalPlacement);
+        boolean valid = canPlaceLocal(size, x, y, horizontalPlacement);
         Color color = valid ? Color.GREEN : Color.RED;
 
         for (int i = 0; i < size; i++) {
-            // rever
-            int dr = horizontalPlacement ? r : r + i;
-            int dc = horizontalPlacement ? c + i : c;
-            if (dr < Board.SIZE && dc < Board.SIZE) {
-                if (!localOccupied[dr][dc]) {
-                    myCells[dr][dc].setBackground(show ? color : Color.CYAN);
+
+            int drawX;
+            if (horizontalPlacement) {
+                drawX = x;
+            } else {
+                drawX = x + i;
+            }
+            int drawY;
+            if (horizontalPlacement) {
+                drawY = y + i;
+            } else {
+                drawY = y;
+            }
+            if (drawX < Board.SIZE && drawY < Board.SIZE) {
+                if (!localOccupied[drawX][drawY]) {
+                    myCells[drawX][drawY].setBackground(show ? color : Color.CYAN);
                 }
             }
         }
     }
 
-    private boolean hasShipAroundLocal(int r, int c) {
+    private boolean hasShipAroundLocal(int x, int y) {
         for (int i = -1; i <= 1; i++) {
             for (int j = -1; j <= 1; j++) {
-                int nr = r + i;
-                int nc = c + j;
+                int nr = x + i;
+                int nc = y + j;
                 if (nr >= 0 && nr < Board.SIZE && nc >= 0 && nc < Board.SIZE) {
                     if (localOccupied[nr][nc])
                         return true;
@@ -150,40 +160,40 @@ public class GUIView extends JFrame implements GameView {
         return false;
     }
 
-    private boolean canPlaceLocal(int size, int r, int c, boolean horiz) {
+    private boolean canPlaceLocal(int size, int x, int y, boolean horiz) {
         if (horiz) {
-            if (c + size > Board.SIZE)
+            if (y + size > Board.SIZE)
                 return false;
             for (int i = 0; i < size; i++)
-                if (hasShipAroundLocal(r, c + i))
+                if (hasShipAroundLocal(x, y + i))
                     return false;
         } else {
-            if (r + size > Board.SIZE)
+            if (x + size > Board.SIZE)
                 return false;
             for (int i = 0; i < size; i++)
-                if (hasShipAroundLocal(r + i, c))
+                if (hasShipAroundLocal(x + i, y))
                     return false;
         }
         return true;
     }
 
-    private void placeShipAt(int r, int c) {
+    private void placeShipAt(int x, int y) {
         if (currentShipIndex >= shipsToPlace.length)
             return;
         int size = shipsToPlace[currentShipIndex];
-        if (!canPlaceLocal(size, r, c, horizontalPlacement))
+        if (!canPlaceLocal(size, x, y, horizontalPlacement))
             return;
 
         for (int i = 0; i < size; i++) {
-            int dr = horizontalPlacement ? r : r + i;
-            int dc = horizontalPlacement ? c + i : c;
+            int dr = horizontalPlacement ? x : x + i;
+            int dc = horizontalPlacement ? y + i : y;
             localOccupied[dr][dc] = true;
             myCells[dr][dc].setBackground(Color.DARK_GRAY);
         }
 
         if (placementString.length() > 0)
             placementString.append(",");
-        placementString.append(size).append(" ").append(r).append(" ").append(c).append(" ")
+        placementString.append(size).append(" ").append(x).append(" ").append(y).append(" ")
                 .append(horizontalPlacement ? "H" : "V");
 
         currentShipIndex++;
@@ -273,12 +283,12 @@ public class GUIView extends JFrame implements GameView {
         SwingUtilities.invokeLater(() -> {
             for (int i = 0; i < Board.SIZE; i++) {
                 for (int j = 0; j < Board.SIZE; j++) {
-                    Cell.CellState st = grid[i][j];
-                    if (st == Cell.CellState.SUNK) {
+                    Cell.CellState cellstate = grid[i][j];
+                    if (cellstate == Cell.CellState.SUNK) {
                         opponentButtons[i][j].setBackground(Color.GRAY);
-                    } else if (st == Cell.CellState.HIT) {
+                    } else if (cellstate == Cell.CellState.HIT) {
                         opponentButtons[i][j].setBackground(Color.RED);
-                    } else if (st == Cell.CellState.MISS) {
+                    } else if (cellstate == Cell.CellState.MISS) {
                         opponentButtons[i][j].setBackground(Color.BLUE);
                     }
                 }

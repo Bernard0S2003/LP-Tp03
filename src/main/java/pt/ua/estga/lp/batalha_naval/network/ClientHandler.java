@@ -11,8 +11,8 @@ import java.net.Socket;
  */
 public class ClientHandler implements Runnable {
     private Socket socket;
-    private ObjectInputStream in;
-    private ObjectOutputStream out;
+    private ObjectInputStream input;
+    private ObjectOutputStream output;
     private int playerId;
     private String playerName;
     private GameSession session;
@@ -25,11 +25,11 @@ public class ClientHandler implements Runnable {
         this.playerId = playerId;
         this.clientIp = socket.getInetAddress().getHostAddress();
         try {
-            // IMPORTANTE: Inicializar ObjectOutputStream ANTES de ObjectInputStream
+            // Inicializar ObjectOutputStream ANTES de ObjectInputStream
             // para evitar deadlock nos construtores bloqueantes.
-            out = new ObjectOutputStream(socket.getOutputStream());
-            out.flush();
-            in = new ObjectInputStream(socket.getInputStream());
+            output = new ObjectOutputStream(socket.getOutputStream());
+            output.flush();
+            input = new ObjectInputStream(socket.getInputStream());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -59,13 +59,13 @@ public class ClientHandler implements Runnable {
      * Envia um objeto payload do tipo Protocol tipadamente para o cliente.
      */
     public void sendMessage(Protocol payload) {
-        if (out != null) {
+        if (output != null) {
             try {
-                out.writeObject(payload);
-                out.flush();
-                // Reset é crucial para que alterações internas nas matrizes dos tabuleiros
-                // sejam detetadas em novos envios (evita cache do ObjectOutputStream)
-                out.reset();
+                output.writeObject(payload);
+                output.flush();
+                // Reset para que alterações internas nas matrizes dos tabuleiros sejam
+                // detetadas em novos envios (evita cache do ObjectOutputStream)
+                output.reset();
             } catch (IOException e) {
                 System.err.println("Erro ao enviar mensagem para Jogador " + playerId + ": " + e.getMessage());
             }
@@ -76,25 +76,26 @@ public class ClientHandler implements Runnable {
     public void run() {
         try {
             Object inputObj;
-            while ((inputObj = in.readObject()) != null) {
+            while ((inputObj = input.readObject()) != null) {
                 if (inputObj instanceof Protocol payload) {
                     System.out.println("Recebido do Cliente " + playerId + ": " + payload.getCommand());
 
                     switch (payload.getCommand()) {
                         case JOIN:
-                            // 1. Prioridade Absoluta: Tentar reconectar por IP!
+                            // Prioridade Absoluta: Tentar reconectar por IP!
                             if (server.tryIPReconnection(this)) {
                                 System.out.println("Reconexão automática por IP com sucesso para: " + clientIp);
                                 break; // Aborta fluxo de login
                             }
-                            
-                            // 2. Se não reconectou e o cliente enviou sonda com nome nulo, avisa que precisa de login!
+
+                            // Se não reconectou e o cliente enviou sonda com nome nulo, avisa que
+                            // precisa de login
                             if (payload.getPlayerName() == null) {
                                 sendMessage(new Protocol(Protocol.Command.NEED_LOGIN));
                                 break;
                             }
 
-                            // 3. Fluxo normal de login
+                            // Fluxo normal de login
                             this.playerName = payload.getPlayerName();
                             if (payload.getGameId() != null && !payload.getGameId().isEmpty()) {
                                 server.loadGame(payload.getGameId(), this);
