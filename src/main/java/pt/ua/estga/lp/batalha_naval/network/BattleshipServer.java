@@ -1,117 +1,126 @@
 package pt.ua.estga.lp.batalha_naval.network;
 
-import pt.ua.estga.lp.batalha_naval.model.GameState;
-import pt.ua.estga.lp.batalha_naval.model.Player;
-import pt.ua.estga.lp.batalha_naval.util.Storage;
-
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+
+import pt.ua.estga.lp.batalha_naval.model.GameState;
+import pt.ua.estga.lp.batalha_naval.model.Player;
+import pt.ua.estga.lp.batalha_naval.util.Storage;
 
 /**
- * Servidor principal da Batalha Naval que escuta por conexões.
+ * Servidor principal da Batalha Naval que espera por ligações
  */
+
 public class BattleshipServer {
+
     private static final int PORT = 8080;
-    private List<ClientHandler> waitingClients = new ArrayList<>();
-    private List<GameSession> activeSessions = new ArrayList<>();
+    private List<ClientHandler> waitingClientsList = new ArrayList<>();
+    private List<GameSession> activeSessionsList = new ArrayList<>();
     private int nextPlayerId = 1;
 
     public void startServer() {
+
         System.out.println("Iniciando Servidor de Batalha Naval na porta " + PORT + "...");
 
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+
             while (true) {
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("Novo cliente conectado: " + clientSocket.getInetAddress());
 
-                ClientHandler handler = new ClientHandler(clientSocket, this, nextPlayerId++);
-                new Thread(handler).start();
+                ClientHandler clientHandler = new ClientHandler(clientSocket, this, nextPlayerId++);
+                new Thread(clientHandler).start();
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public synchronized void playerReady(ClientHandler handler) {
-        waitingClients.add(handler);
-        if (waitingClients.size() == 2) {
-            ClientHandler p1 = waitingClients.get(0);
-            ClientHandler p2 = waitingClients.get(1);
-            waitingClients.clear();
+    public synchronized void playerReady(ClientHandler clientHandler) {
+
+        waitingClientsList.add(clientHandler);
+
+        if (waitingClientsList.size() == 2) {
+            ClientHandler player1 = waitingClientsList.get(0);
+            ClientHandler player2 = waitingClientsList.get(1);
+            waitingClientsList.clear();
 
             System.out.println("Dois jogadores conectados! Iniciando partida...");
 
-            GameSession session = new GameSession(p1, p2, null);
             // Configurar jogadores iniciais na GameState
             GameState state = new GameState();
-            state.setPlayer1(new Player(p1.getPlayerId(), p1.getPlayerName()));
-            state.setPlayer2(new Player(p2.getPlayerId(), p2.getPlayerName()));
+            state.setPlayer1(new Player(player1.getPlayerId(), player1.getPlayerName()));
+            state.setPlayer2(new Player(player2.getPlayerId(), player2.getPlayerName()));
 
             // Re-instanciar sessão com o state preenchido
-            session = new GameSession(p1, p2, state);
-            activeSessions.add(session);
+            GameSession session = new GameSession(player1, player2, state);
+            activeSessionsList.add(session);
             session.start();
         } else {
-            handler.sendMessage(new Protocol(Protocol.Command.WAITING));
+            clientHandler.sendMessage(new Protocol(Protocol.Command.WAITING));
         }
     }
 
     // rever
-    private java.util.Map<String, List<ClientHandler>> recoveringGames = new java.util.HashMap<>();
+    private Map<String, List<ClientHandler>> recoveringGames = new java.util.HashMap<>();
 
-    public synchronized void loadGame(String gameId, ClientHandler initiator) {
+    public synchronized void loadGame(String gameId, ClientHandler clientHandler) {
+
         GameState state = Storage.loadGame(gameId);
+
         if (state == null) {
             Protocol err = new Protocol(Protocol.Command.ERROR);
             err.setMessage("Jogo não encontrado!");
-            initiator.sendMessage(err);
+            clientHandler.sendMessage(err);
             return;
         }
 
-        List<ClientHandler> list = recoveringGames.computeIfAbsent(gameId, k -> new ArrayList<>());
-        if (!list.contains(initiator)) {
-            list.add(initiator);
+        List<ClientHandler> clientHandlerList = recoveringGames.computeIfAbsent(gameId, value -> new ArrayList<>());
+
+        if (!clientHandlerList.contains(clientHandler)) {
+            clientHandlerList.add(clientHandler);
         }
 
-        if (list.size() == 2) {
-            ClientHandler p1 = list.get(0);
-            ClientHandler p2 = list.get(1);
+        if (clientHandlerList.size() == 2) {
+            ClientHandler player1 = clientHandlerList.get(0);
+            ClientHandler player2 = clientHandlerList.get(1);
             recoveringGames.remove(gameId);
 
             System.out.println("Dois jogadores reconectados para a partida " + gameId + "! Retomando...");
 
-            int oldP1Id = state.getPlayer1().getId();
-            int oldP2Id = state.getPlayer2().getId();
+            int oldPlayer1Id = state.getPlayer1().getId();
+            int oldPlayer2Id = state.getPlayer2().getId();
 
             // Atualizar os IDs dos jogadores persistidos para coincidir com as novas
             // conexões de sockets
-            state.getPlayer1().setId(p1.getPlayerId());
-            state.getPlayer2().setId(p2.getPlayerId());
+            state.getPlayer1().setId(player1.getPlayerId());
+            state.getPlayer2().setId(player2.getPlayerId());
 
             int savedShots = state.getShotsRemaining();
-            if (state.getCurrentPlayerTurn() == oldP1Id) {
-                state.setCurrentPlayerTurn(p1.getPlayerId());
-            } else if (state.getCurrentPlayerTurn() == oldP2Id) {
-                state.setCurrentPlayerTurn(p2.getPlayerId());
+            if (state.getCurrentPlayerTurn() == oldPlayer1Id) {
+                state.setCurrentPlayerTurn(player1.getPlayerId());
+            } else if (state.getCurrentPlayerTurn() == oldPlayer2Id) {
+                state.setCurrentPlayerTurn(player2.getPlayerId());
             }
             state.setShotsRemaining(savedShots);
 
-            GameSession session = new GameSession(p1, p2, state);
-            activeSessions.add(session);
+            GameSession session = new GameSession(player1, player2, state);
+            activeSessionsList.add(session);
             session.start();
         } else {
             Protocol waitPayload = new Protocol(Protocol.Command.WAITING);
             waitPayload.setMessage("Jogo carregado. A aguardar que o adversário introduza o ID: " + gameId);
-            initiator.sendMessage(waitPayload);
+            clientHandler.sendMessage(waitPayload);
         }
     }
 
-    public synchronized boolean tryIPReconnection(ClientHandler newHandler) {
-        for (GameSession session : activeSessions) {
-            if (session.reconnectPlayer(newHandler)) {
+    public synchronized boolean tryIPReconnection(ClientHandler newClientHandler) {
+        for (GameSession session : activeSessionsList) {
+            if (session.reconnectPlayer(newClientHandler)) {
                 return true;
             }
         }
@@ -119,6 +128,6 @@ public class BattleshipServer {
     }
 
     public synchronized void removeSession(GameSession session) {
-        activeSessions.remove(session);
+        activeSessionsList.remove(session);
     }
 }

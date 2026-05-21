@@ -1,11 +1,12 @@
 package pt.ua.estga.lp.batalha_naval.network;
 
-import pt.ua.estga.lp.batalha_naval.view.GameView;
 import pt.ua.estga.lp.batalha_naval.model.Cell;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+
+import pt.ua.estga.lp.batalha_naval.view.GameView;
 
 /**
  * Cliente que se conecta ao servidor. Inicia uma Thread (NetworkListener) para
