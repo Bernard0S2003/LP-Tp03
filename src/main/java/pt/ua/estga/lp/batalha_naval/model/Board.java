@@ -50,9 +50,18 @@ public class Board implements Serializable {
         }
 
         for (int i = 0; i < ship.getSize(); i++) {
-            // ALTERAR
-            int cx = horizontal ? x : x + i;
-            int cy = horizontal ? y + i : y;
+            int cx;
+            int cy;
+
+            if (horizontal) {
+                cx = x;
+                cy = y + i;
+            }
+            else {
+                cx = x + i;
+                cy = y ;
+            }
+
             grid[cx][cy].setShip(ship);
         }
 
@@ -63,9 +72,12 @@ public class Board implements Serializable {
     private boolean hasShipAround(int x, int y) {
         for (int i = -1; i <= 1; i++) {
             for (int j = -1; j <= 1; j++) {
+
                 int nx = x + i;
                 int ny = y + j;
+
                 if (nx >= 0 && nx < SIZE && ny >= 0 && ny < SIZE) {
+
                     if (grid[nx][ny].hasShip())
                         return true;
                 }
@@ -75,16 +87,23 @@ public class Board implements Serializable {
     }
 
     private boolean canPlaceShip(int size, int x, int y, boolean horizontal) {
+
         if (horizontal) {
+
             if (x < 0 || y < 0 || y + size > SIZE || x >= SIZE)
                 return false;
+
             for (int i = 0; i < size; i++) {
+
                 if (hasShipAround(x, y + i))
                     return false;
             }
+
         } else {
+
             if (x < 0 || y < 0 || x + size > SIZE || y >= SIZE)
                 return false;
+
             for (int i = 0; i < size; i++) {
                 if (hasShipAround(x + i, y))
                     return false;
@@ -111,16 +130,16 @@ public class Board implements Serializable {
         }
 
         if (cell.hasShip()) {
-            Ship s = cell.getShip();
-            boolean isSunk = s.hit();
+            Ship ship = cell.getShip();
+            boolean isSunk = ship.hit();
             cell.setState(Cell.CellState.HIT);
 
             if (isSunk) {
                 // Se afundou, devemos atualizar todas as células deste navio para SUNK
-                updateSunkShipCells(s);
-                return "AFUNDOU " + s.getType().getName();
+                updateSunkShipCells(ship);
+                return "AFUNDOU " + ship.getType().getName();
             }
-            return "ACERTOU_EM " + s.getType().getName();
+            return "ACERTOU_EM " + ship.getType().getName();
         } else {
             cell.setState(Cell.CellState.MISS);
             return "AGUA";
@@ -138,9 +157,12 @@ public class Board implements Serializable {
     }
 
     public boolean areAllShipsSunk() {
+
         if (fleet.isEmpty())
             return false;
+
         for (Ship ship : fleet) {
+            
             if (!ship.isSunk()) {
                 return false;
             }

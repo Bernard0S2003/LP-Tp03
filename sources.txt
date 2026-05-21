@@ -12,6 +12,5 @@ C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\
 C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\network\GameSession.java
 C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\network\Protocol.java
 C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\util\Storage.java
-C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\view\CLIView.java
 C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\view\GameView.java
 C:\Users\bernardos\Documents\NetBeansProjects\Batalha_Naval\src\main\java\pt\ua\estga\lp\batalha_naval\view\GUIView.java
