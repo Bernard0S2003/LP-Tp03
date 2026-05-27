@@ -8,18 +8,21 @@ import java.io.Serializable;
 public class Ship implements Serializable {
     private static final long serialVersionUID = 1L;
     
+    //Atributos
     private ShipType type;
     private int size;
     private int hits;
     private boolean sunk;
-
+    
+    //construtor
     public Ship(ShipType type) {
         this.type = type;
         this.size = type.getSize();
         this.hits = 0;
         this.sunk = false;
     }
-
+    
+    //getters
     public ShipType getType() {
         return type;
     }
@@ -35,7 +38,8 @@ public class Ship implements Serializable {
     public int getHits() {
         return hits;
     }
-
+    
+    //utils
     /**
      * Regista um tiro neste navio.
      * @return true se o tiro afundou o navio, false caso contrário.

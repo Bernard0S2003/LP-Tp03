@@ -1,5 +1,6 @@
-package pt.ua.estga.lp.batalha_naval.network;
+package pt.ua.estga.lp.batalha_naval.cliente;
 
+import pt.ua.estga.lp.batalha_naval.util.Protocol;
 import pt.ua.estga.lp.batalha_naval.model.Cell;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -13,19 +14,20 @@ import pt.ua.estga.lp.batalha_naval.view.GameView;
  * ouvir atualizações enviadas via instâncias de Protocol.
  */
 public class BattleshipClient {
-    private String serverIp;
-    private int serverPort;
-    private Socket socket;
-    private ObjectOutputStream output;
-    private ObjectInputStream input;
-    private GameView view;
+    
+    //Atributos
+    public String serverIp;
+    public int serverPort;
+    public Socket socket;
+    public ObjectOutputStream output;
+    public ObjectInputStream input;
+    public GameView view;
+    public int myId;
+    public String gameId;
+    public Cell[][] myLocalGrid;
+    public Cell.CellState[][] opponentLocalGrid;
 
-    private int myId;
-    private String gameId;
-
-    private Cell[][] myLocalGrid;
-    private Cell.CellState[][] opponentLocalGrid;
-
+    //Construtor
     public BattleshipClient(String serverIp, int serverPort, GameView view) {
         this.serverIp = serverIp;
         this.serverPort = serverPort;
@@ -41,7 +43,9 @@ public class BattleshipClient {
             }
         }
     }
-
+    
+    //metodos- funcionalidades do cliente 
+    
     public boolean connect(String playerName, String optionalGameIdToLoad) {
         try {
             socket = new Socket(serverIp, serverPort);
@@ -51,7 +55,7 @@ public class BattleshipClient {
             input = new ObjectInputStream(socket.getInputStream());
 
             // Iniciar a Thread que ouve o servidor
-            new Thread(new NetworkListener()).start();
+            new Thread(new NetworkListener(this)).start();
 
             // Enviar payload de JOIN
             Protocol joinPayload = new Protocol(Protocol.Command.JOIN);
@@ -70,7 +74,7 @@ public class BattleshipClient {
             return false;
         }
     }
-
+    
     /**
      * Envia o payload JOIN com as credenciais recolhidas após falha de reconexão
      * por IP.
@@ -125,129 +129,5 @@ public class BattleshipClient {
             view.showError("Erro ao pedir save do jogo: " + e.getMessage());
         }
     }
-
-    /**
-     * Thread que fica eternamente à escuta de objetos vindos do servidor para
-     * atualizar a UI.
-     */
-    private class NetworkListener implements Runnable {
-        @Override
-        public void run() {
-            try {
-                Object inputObj;
-                while ((inputObj = input.readObject()) != null) {
-                    if (inputObj instanceof Protocol payload) {
-                        processServerMessage(payload);
-                    }
-                }
-            } catch (IOException | ClassNotFoundException e) {
-                view.showError("Conexão perdida com o servidor.");
-            }
-        }
-
-        private void processServerMessage(Protocol payload) {
-            try {
-                switch (payload.getCommand()) {
-                    case WELCOME:
-                        myId = payload.getPlayerId();
-                        gameId = payload.getGameId();
-                        view.showMessage("Conectado! Tu és o Jogador " + myId + ". Jogo ID: " + gameId);
-                        break;
-                    case WAITING:
-                        if (payload.getMessage() != null) {
-                            view.showMessage(payload.getMessage());
-                        } else {
-                            view.showMessage("A aguardar o oponente...");
-                        }
-                        break;
-                    case SETUP:
-                        view.requestShipPlacement();
-                        break;
-                    case START:
-                        int firstPlayerId = payload.getPlayerId();
-                        view.onGameStart(firstPlayerId);
-                        break;
-                    case TURN:
-                        int currentPlayerId = payload.getPlayerId();
-                        int shots = payload.getShotsRemaining();
-                        if (currentPlayerId == myId) {
-                            view.onTurnStart(shots);
-                        } else {
-                            view.onTurnEnd();
-                            view.showMessage("Turno do adversário. Aguarda...");
-                        }
-                        break;
-                    case SHOT_RES:
-                        int shooter = payload.getPlayerId();
-                        int x = payload.getX();
-                        int y = payload.getY();
-                        String result = payload.getShotResult();
-                        String info = payload.getInfo() != null ? payload.getInfo() : "";
-
-                        Cell.CellState shotState = (result.equals(Protocol.RES_HIT) || result.equals(Protocol.RES_SUNK))
-                                ? Cell.CellState.HIT
-                                : Cell.CellState.MISS;
-
-                        if (shooter == myId) {
-                            view.showMessage("O teu tiro em (" + x + "," + y + "): " + result + " " + info);
-                            opponentLocalGrid[x][y] = shotState;
-                            view.updateOpponentBoard(opponentLocalGrid);
-                        } else {
-                            view.showMessage("Adversário atirou em (" + x + "," + y + "): " + result + " " + info);
-                            myLocalGrid[x][y].setState(shotState);
-                            view.updateMyBoard(myLocalGrid);
-                        }
-                        break;
-                    case RESTORE:
-                        // Receção dos tabuleiros e grids nativamente como objetos estruturados
-                        Cell[][] myBoardRestored = payload.getMyBoardCells();
-                        Cell.CellState[][] oppViewRestored = payload
-                                .getOpponentBoardView();
-
-                        if (myBoardRestored != null) {
-                            for (int i = 0; i < 10; i++) {
-                                for (int j = 0; j < 10; j++) {
-                                    myLocalGrid[i][j].setShip(myBoardRestored[i][j].getShip());
-                                    myLocalGrid[i][j].setState(myBoardRestored[i][j].getState());
-                                }
-                            }
-                        }
-                        if (oppViewRestored != null) {
-                            for (int i = 0; i < 10; i++) {
-                                for (int j = 0; j < 10; j++) {
-                                    opponentLocalGrid[i][j] = oppViewRestored[i][j];
-                                }
-                            }
-                        }
-                        view.updateMyBoard(myLocalGrid);
-                        view.updateOpponentBoard(opponentLocalGrid);
-                        break;
-                    case GAME_OVER:
-                        String winner = payload.getPlayerName();
-                        view.onGameOver(winner);
-                        break;
-                    case SAVED:
-                        view.showMessage("Jogo guardado com sucesso! ID: " + payload.getGameId());
-                        break;
-                    case ERROR:
-                        view.showError(payload.getMessage());
-                        break;
-                    case DISCONNECT_TIMER:
-                        int seconds = payload.getTimerSeconds();
-                        if (seconds == -1) {
-                            view.onHideTimer();
-                        } else {
-                            view.onShowTimer(seconds);
-                        }
-                        break;
-                    case NEED_LOGIN:
-                        view.onRequestLogin();
-                        break;
-                }
-            } catch (Exception e) {
-                view.showMessage("ERRO LOCAL: " + e.getMessage());
-                e.printStackTrace();
-            }
-        }
-    }
+    
 }

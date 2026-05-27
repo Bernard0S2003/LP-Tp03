@@ -1,6 +1,7 @@
-package pt.ua.estga.lp.batalha_naval.network;
+package pt.ua.estga.lp.batalha_naval.server;
 
 import pt.ua.estga.lp.batalha_naval.model.*;
+import pt.ua.estga.lp.batalha_naval.util.Protocol;
 import pt.ua.estga.lp.batalha_naval.util.Storage;
 
 /**

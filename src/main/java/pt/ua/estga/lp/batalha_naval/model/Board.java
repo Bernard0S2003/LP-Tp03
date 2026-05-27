@@ -8,13 +8,14 @@ import java.util.List;
  * Representa o tabuleiro do jogo de um jogador (10x10).
  */
 public class Board implements Serializable {
-    // ALTERA TODO SERIALVERSID
     private static final long serialVersionUID = 1L;
 
+    //atributos
     public static final int SIZE = 10;
     private Cell[][] grid;
     private List<Ship> fleet;
 
+    //Construtor
     public Board() {
         grid = new Cell[SIZE][SIZE];
         fleet = new ArrayList<>();
@@ -26,11 +27,21 @@ public class Board implements Serializable {
             }
         }
     }
-
+    
+    //getters
+    
     public Cell getCell(int x, int y) {
         if (!isValidCoordinate(x, y))
             return null;
         return grid[x][y];
+    }
+    
+    public List<Ship> getFleet() {
+        return fleet;
+    }
+
+    public Cell[][] getGrid() {
+        return grid;
     }
 
     /**
@@ -48,7 +59,6 @@ public class Board implements Serializable {
         if (!canPlaceShip(ship.getSize(), x, y, horizontal)) {
             return false;
         }
-
         for (int i = 0; i < ship.getSize(); i++) {
             int cx;
             int cy;
@@ -68,50 +78,7 @@ public class Board implements Serializable {
         fleet.add(ship);
         return true;
     }
-
-    private boolean hasShipAround(int x, int y) {
-        for (int i = -1; i <= 1; i++) {
-            for (int j = -1; j <= 1; j++) {
-
-                int nx = x + i;
-                int ny = y + j;
-
-                if (nx >= 0 && nx < SIZE && ny >= 0 && ny < SIZE) {
-
-                    if (grid[nx][ny].hasShip())
-                        return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    private boolean canPlaceShip(int size, int x, int y, boolean horizontal) {
-
-        if (horizontal) {
-
-            if (x < 0 || y < 0 || y + size > SIZE || x >= SIZE)
-                return false;
-
-            for (int i = 0; i < size; i++) {
-
-                if (hasShipAround(x, y + i))
-                    return false;
-            }
-
-        } else {
-
-            if (x < 0 || y < 0 || x + size > SIZE || y >= SIZE)
-                return false;
-
-            for (int i = 0; i < size; i++) {
-                if (hasShipAround(x + i, y))
-                    return false;
-            }
-        }
-        return true;
-    }
-
+    
     /**
      * Processa um tiro nas coordenadas dadas.
      * 
@@ -145,6 +112,43 @@ public class Board implements Serializable {
             return "AGUA";
         }
     }
+    
+    //util
+    
+    private boolean hasShipAround(int x, int y) {
+        for (int i = -1; i <= 1; i++) {
+            for (int j = -1; j <= 1; j++) {
+                int nx = x + i;
+                int ny = y + j;
+                if (nx >= 0 && nx < SIZE && ny >= 0 && ny < SIZE) {
+                    if (grid[nx][ny].hasShip())
+                        return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean canPlaceShip(int size, int x, int y, boolean horizontal) {
+
+        if (horizontal) {
+            if (x < 0 || y < 0 || y + size > SIZE || x >= SIZE)
+                return false;
+            for (int i = 0; i < size; i++) {
+                if (hasShipAround(x, y + i))
+                    return false;
+            }
+
+        } else {
+            if (x < 0 || y < 0 || x + size > SIZE || y >= SIZE)
+                return false;
+            for (int i = 0; i < size; i++) {
+                if (hasShipAround(x + i, y))
+                    return false;
+            }
+        }
+        return true;
+    }
 
     private void updateSunkShipCells(Ship ship) {
         for (int i = 0; i < SIZE; i++) {
@@ -174,11 +178,5 @@ public class Board implements Serializable {
         return x >= 0 && x < SIZE && y >= 0 && y < SIZE;
     }
 
-    public List<Ship> getFleet() {
-        return fleet;
-    }
-
-    public Cell[][] getGrid() {
-        return grid;
-    }
+    
 }

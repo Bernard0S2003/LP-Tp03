@@ -1,8 +1,13 @@
 package pt.ua.estga.lp.batalha_naval.util;
 
-import pt.ua.estga.lp.batalha_naval.model.GameState;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
-import java.io.*;
+import pt.ua.estga.lp.batalha_naval.model.GameState;
 
 /**
  * Utilitário para guardar e carregar o estado do jogo (Persistência).

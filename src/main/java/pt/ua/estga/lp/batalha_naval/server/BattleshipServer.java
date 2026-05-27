@@ -1,4 +1,4 @@
-package pt.ua.estga.lp.batalha_naval.network;
+package pt.ua.estga.lp.batalha_naval.server;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -6,9 +6,9 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
 import pt.ua.estga.lp.batalha_naval.model.GameState;
 import pt.ua.estga.lp.batalha_naval.model.Player;
+import pt.ua.estga.lp.batalha_naval.util.Protocol;
 import pt.ua.estga.lp.batalha_naval.util.Storage;
 
 /**
@@ -16,12 +16,16 @@ import pt.ua.estga.lp.batalha_naval.util.Storage;
  */
 
 public class BattleshipServer {
-
+    
+    //Attributos
     private static final int PORT = 8080;
+    private Map<String, List<ClientHandler>> recoveringGames = new java.util.HashMap<>();
     private List<ClientHandler> waitingClientsList = new ArrayList<>();
     private List<GameSession> activeSessionsList = new ArrayList<>();
     private int nextPlayerId = 1;
-
+    
+    //metodos
+    
     public void startServer() {
 
         System.out.println("Iniciando Servidor de Batalha Naval na porta " + PORT + "...");
@@ -64,9 +68,6 @@ public class BattleshipServer {
             clientHandler.sendMessage(new Protocol(Protocol.Command.WAITING));
         }
     }
-
-    // rever
-    private Map<String, List<ClientHandler>> recoveringGames = new java.util.HashMap<>();
 
     public synchronized void loadGame(String gameId, ClientHandler clientHandler) {
 

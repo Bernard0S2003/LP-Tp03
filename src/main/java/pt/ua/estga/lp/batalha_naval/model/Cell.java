@@ -7,7 +7,8 @@ import java.io.Serializable;
  */
 public class Cell implements Serializable {
     private static final long serialVersionUID = 1L;
-
+    
+    //enum estado das celulas
     public enum CellState {
         WATER,        // Água normal
         SHIP,         // Contém parte de um navio intacto
@@ -15,25 +16,30 @@ public class Cell implements Serializable {
         HIT,          // Tiro que acertou num navio
         SUNK          // Tiro num navio já afundado
     }
-
+    
+    //atributos
     private CellState state;
     private Ship ship; // Referência ao navio que ocupa esta célula, se houver
 
+    //Construtor
     public Cell() {
         this.state = CellState.WATER;
         this.ship = null;
     }
-
+    
+    //getters
     public CellState getState() {
         return state;
     }
-
-    public void setState(CellState state) {
-        this.state = state;
-    }
-
+    
     public Ship getShip() {
         return ship;
+    }
+    
+    //Setters
+    
+    public void setState(CellState state) {
+        this.state = state;
     }
 
     public void setShip(Ship ship) {
@@ -43,6 +49,7 @@ public class Cell implements Serializable {
         }
     }
     
+    //util
     public boolean hasShip() {
         return this.ship != null;
     }
