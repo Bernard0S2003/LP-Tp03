@@ -13,6 +13,8 @@ import java.net.Socket;
  * comunicando através de instâncias da classe Protocol.
  */
 public class ClientHandler implements Runnable {
+    
+    //atributos
     private Socket socket;
     private ObjectInputStream input;
     private ObjectOutputStream output;
@@ -22,6 +24,7 @@ public class ClientHandler implements Runnable {
     private BattleshipServer server;
     private String clientIp;
 
+    //Construtor
     public ClientHandler(Socket socket, BattleshipServer server, int playerId) {
         this.socket = socket;
         this.server = server;
@@ -37,19 +40,12 @@ public class ClientHandler implements Runnable {
             e.printStackTrace();
         }
     }
-
+    
+    //Getters
     public int getPlayerId() {
         return playerId;
     }
-
-    public void setPlayerId(int playerId) {
-        this.playerId = playerId;
-    }
-
-    public void setGameSession(GameSession session) {
-        this.session = session;
-    }
-
+    
     public String getPlayerName() {
         return playerName;
     }
@@ -58,6 +54,17 @@ public class ClientHandler implements Runnable {
         return clientIp;
     }
 
+    //setters
+    
+    public void setPlayerId(int playerId) {
+        this.playerId = playerId;
+    }
+
+    public void setGameSession(GameSession session) {
+        this.session = session;
+    }
+
+    
     /**
      * Envia um objeto payload do tipo Protocol tipadamente para o cliente.
      */

@@ -8,8 +8,6 @@ import java.io.IOException;
 import pt.ua.estga.lp.batalha_naval.model.Cell;
 import pt.ua.estga.lp.batalha_naval.util.Protocol;
 
-
-
 //Comunicação com o Servidor
 
 /**
@@ -17,9 +15,9 @@ import pt.ua.estga.lp.batalha_naval.util.Protocol;
  * atualizar a UI.
  */
 class NetworkListener implements Runnable {
-
+    
     private final BattleshipClient battleshipClient;
-
+    
     NetworkListener(final BattleshipClient battleshipClient) {
         this.battleshipClient = battleshipClient;
     }
