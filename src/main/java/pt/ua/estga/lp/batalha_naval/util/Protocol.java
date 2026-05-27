@@ -1,4 +1,4 @@
-package pt.ua.estga.lp.batalha_naval.network;
+package pt.ua.estga.lp.batalha_naval.util;
 
 import pt.ua.estga.lp.batalha_naval.model.Cell;
 import java.io.Serializable;

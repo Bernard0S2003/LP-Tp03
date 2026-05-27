@@ -7,7 +7,8 @@ import java.io.Serializable;
  */
 public class Player implements Serializable {
     private static final long serialVersionUID = 1L;
-
+    
+    //atributos
     private int id;
     private String name;
     private Board myBoard;
@@ -15,7 +16,8 @@ public class Player implements Serializable {
 
     // Matriz simplificada para guardar os tiros que o jogador já efetuou
     private Cell.CellState[][] opponentBoardView;
-
+    
+    //construtor
     public Player(int id, String name) {
         this.id = id;
         this.name = name;
@@ -28,15 +30,12 @@ public class Player implements Serializable {
             }
         }
     }
-
+    
+    //getters
     public int getId() {
         return id;
     }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
+    
     public String getName() {
         return name;
     }
@@ -44,20 +43,26 @@ public class Player implements Serializable {
     public Board getMyBoard() {
         return myBoard;
     }
-
+    
+    public Cell.CellState[][] getOpponentBoardView() {
+        return opponentBoardView;
+    }
+    
     public boolean isReady() {
         return isReady;
+    }
+    
+    //Setters
+    public void setId(int id) {
+        this.id = id;
     }
 
     public void setReady(boolean ready) {
         isReady = ready;
     }
 
-    public Cell.CellState[][] getOpponentBoardView() {
-        return opponentBoardView;
-    }
-
-    // Possivel alteracao do board daqui para board.java
+    
+    // Util
     public void updateOpponentBoardView(int x, int y, Cell.CellState state) {
         if (myBoard.isValidCoordinate(x, y)) {
             this.opponentBoardView[x][y] = state;

@@ -1,20 +1,21 @@
-package pt.ua.estga.lp.batalha_naval.network;
+package pt.ua.estga.lp.batalha_naval.server;
 
 import pt.ua.estga.lp.batalha_naval.model.*;
+import pt.ua.estga.lp.batalha_naval.util.Protocol;
 import pt.ua.estga.lp.batalha_naval.util.Storage;
 
 /**
  * Gere uma partida entre dois jogadores, servindo de árbitro e coordenando as
  * threads dos clientes através da classe de mensagens Protocol.
- * Implementa tolerância a falhas com reconexão resiliente baseada em IP
- * e temporizador de 3 minutos.
  */
 public class GameSession {
+    
+    //atributos
     private GameState state;
     private ClientHandler handler1;
     private ClientHandler handler2;
 
-    // Atributos para reconexão resiliente
+    // Atributos para reconectar jogadores
     private String player1Ip;
     private String player2Ip;
     private boolean player1Connected = true;
@@ -22,7 +23,8 @@ public class GameSession {
     private java.util.Timer disconnectTimer;
     private int secondsLeft = 180;
     private int disconnectedPlayerId = -1;
-
+    
+    //construtor
     public GameSession(ClientHandler player1, ClientHandler player2, GameState loadedState) {
         this.handler1 = player1;
         this.handler2 = player2;
@@ -40,6 +42,9 @@ public class GameSession {
         player2.setGameSession(this);
     }
 
+    /**
+     * Setup inicial do Server
+     */
     public synchronized void start() {
         Protocol welcome1 = new Protocol(Protocol.Command.WELCOME);
         welcome1.setPlayerId(state.getPlayer1().getId());
@@ -79,9 +84,8 @@ public class GameSession {
     }
 
     /**
-     * Envia objeto Protocol para os dois jogadores se estiverem conectados.
+     * Envia objeto Protocol(mensagem) para os dois jogadores se estiverem conectados.
      */
-
     public synchronized void broadcast(Protocol payload) {
         if (handler1 != null && player1Connected)
             handler1.sendMessage(payload);
@@ -149,6 +153,7 @@ public class GameSession {
      */
 
     public synchronized void handleShot(int playerId, int x, int y) {
+        
         if (state.getStatus() != GameState.GameStatus.PLAYING)
             return;
         if (playerId != state.getCurrentPlayerTurn()) {
@@ -237,7 +242,10 @@ public class GameSession {
 
         broadcastTurn();
     }
-
+    
+    /**
+     * Comunica a troca de Turno
+     */
     private void broadcastTurn() {
         Protocol turnPlayer = new Protocol(Protocol.Command.TURN);
         turnPlayer.setPlayerId(state.getCurrentPlayerTurn());
@@ -283,7 +291,10 @@ public class GameSession {
 
         startDisconnectTimer();
     }
-
+    
+     /**
+     * dar start no Timer 
+     */
     private synchronized void startDisconnectTimer() {
         if (disconnectTimer != null) {
             disconnectTimer.cancel();
@@ -321,7 +332,10 @@ public class GameSession {
             }
         }, 1000, 1000);
     }
-
+    
+    /**
+     * dar stop no Timer 
+     */
     private synchronized void cancelDisconnectTimer() {
         if (disconnectTimer != null) {
             disconnectTimer.cancel();
@@ -329,6 +343,9 @@ public class GameSession {
         }
     }
 
+    /**
+     * Termina o jogo notificado que o jogador vencedor ganhou por desistencia do adeversario
+     */    
     private synchronized void handleTimeoutLoss() {
         cancelDisconnectTimer();
         state.setStatus(GameState.GameStatus.FINISHED);
@@ -362,6 +379,7 @@ public class GameSession {
      * restaurando o canal de comunicação.
      */
     public synchronized boolean reconnectPlayer(ClientHandler newHandler) {
+        
         if (state.getStatus() == GameState.GameStatus.FINISHED) {
             return false;
         }
@@ -373,7 +391,7 @@ public class GameSession {
             cancelDisconnectTimer();
             this.handler1 = newHandler;
             this.player1Connected = true;
-            this.player1Ip = newHandler.getClientIp(); // Atualizar em caso de ligeira mutação
+            this.player1Ip = newHandler.getClientIp();
 
             // RESTAURO DO ID ORIGINAL DO JOGADOR NA NOVA SOCKET
             newHandler.setPlayerId(state.getPlayer1().getId());
@@ -410,7 +428,10 @@ public class GameSession {
 
         return false;
     }
-
+    
+    /**
+     * Atualiza o Estado do jogo apos o jogador reconectar 
+     */
     private void syncReconnectedPlayer(ClientHandler newHandler, Player returningPlayer) {
         System.out.println("Jogador " + returningPlayer.getId() + " reconectado com sucesso. A resincronizar...");
 
@@ -462,14 +483,17 @@ public class GameSession {
             }
         }
     }
-
+    /**
+     * Gaurda o jogo e avisa os jogadores
+     */
     public synchronized void handleSaveRequest() {
         Storage.saveGame(state);
         Protocol savedPlayer = new Protocol(Protocol.Command.SAVED);
         savedPlayer.setGameId(state.getGameId());
         broadcast(savedPlayer);
     }
-
+    
+    //utils
     private ClientHandler getHandler(int playerId) {
         return (state.getPlayer1() != null && state.getPlayer1().getId() == playerId) ? handler1 : handler2;
     }

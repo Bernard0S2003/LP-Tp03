@@ -2,7 +2,7 @@ package pt.ua.estga.lp.batalha_naval.view;
 
 import pt.ua.estga.lp.batalha_naval.model.Board;
 import pt.ua.estga.lp.batalha_naval.model.Cell;
-import pt.ua.estga.lp.batalha_naval.network.BattleshipClient;
+import pt.ua.estga.lp.batalha_naval.cliente.BattleshipClient;
 
 import javax.swing.*;
 import java.awt.*;
@@ -11,15 +11,17 @@ import java.awt.*;
  * Interface Gráfica (GUI) desenvolvida com Java Swing.
  */
 public class GUIView extends JFrame implements GameView {
+    
+    //Atributos
     private BattleshipClient client;
     private JTextArea logArea;
     private JButton[][] opponentButtons;
     private JPanel myBoardPanel;
+    private JLabel timerLabel;
     private boolean isMyTurn = false;
     private int shotsLeft = 0;
-    private JLabel timerLabel;
 
-    // Estado da colocação de barcos
+    // Atributos para colocação de barcos
     private int[] shipsToPlace = { 5, 4, 3, 3, 2, 2, 2, 1, 1, 1, 1 };
     private int currentShipIndex = 0;
     private boolean horizontalPlacement = true;
@@ -27,7 +29,8 @@ public class GUIView extends JFrame implements GameView {
     private boolean[][] localOccupied = new boolean[Board.SIZE][Board.SIZE];
     private boolean isPlacingPhase = false;
     private StringBuilder placementString = new StringBuilder();
-
+    
+    //Construtor
     public GUIView() {
         setTitle("Batalha Naval");
         setSize(800, 500);
@@ -116,7 +119,8 @@ public class GUIView extends JFrame implements GameView {
         topPanel.add(btnSave);
         add(topPanel, BorderLayout.NORTH);
     }
-
+    
+    //metodos
     private void drawPreview(int x, int y, boolean show) {
         if (currentShipIndex >= shipsToPlace.length)
             return;
@@ -238,7 +242,8 @@ public class GUIView extends JFrame implements GameView {
             isMyTurn = false;
         }
     }
-
+    
+    // metodos da Interface GameView
     @Override
     public void showMessage(String message) {
         SwingUtilities.invokeLater(() -> logArea.append(message + "\n"));

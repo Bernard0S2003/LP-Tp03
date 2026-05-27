@@ -4,8 +4,7 @@ import pt.ua.estga.lp.batalha_naval.model.Cell;
 
 /**
  * Interface que todas as Views (CLI ou GUI) devem implementar.
- * Permite que a Thread de Rede do Cliente atualize a interface sem conhecer os
- * detalhes da sua implementação.
+ * Permite que a Thread de Rede do Cliente atualize a interface 
  */
 public interface GameView {
     void showMessage(String message);

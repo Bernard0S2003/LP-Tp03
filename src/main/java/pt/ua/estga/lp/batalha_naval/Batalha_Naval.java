@@ -1,6 +1,6 @@
 package pt.ua.estga.lp.batalha_naval;
 
-import pt.ua.estga.lp.batalha_naval.network.BattleshipServer;
+import pt.ua.estga.lp.batalha_naval.server.BattleshipServer;
 import pt.ua.estga.lp.batalha_naval.view.GUIView;
 
 import javax.swing.*;
@@ -17,20 +17,36 @@ public class Batalha_Naval {
         Scanner scanner = new Scanner(System.in);
         System.out.print("Opção: ");
         int opt = scanner.nextInt();
-        scanner.close();
+
+        // Consumir a quebra de linha (Enter) deixada pelo nextInt()
+        scanner.nextLine(); 
+
         switch (opt) {
             case 1:
                 BattleshipServer server = new BattleshipServer();
                 server.startServer();
                 break;
             case 2:
+                System.out.print("Insira o IP do servidor (prima Enter para 'localhost'): ");
+                String serverIp = scanner.nextLine();
+
+                // Se o utilizador não digitar nada, usamos o localhost por predefinição
+                if (serverIp.trim().isEmpty()) {
+                    serverIp = "localhost";
+                }
+
+                final String ipToConnect = serverIp;
+
                 SwingUtilities.invokeLater(() -> {
                     GUIView gui = new GUIView();
-                    gui.start("localhost", 8080);
+                    gui.start(ipToConnect, 8080);
                 });
                 break;
             default:
                 System.out.println("Opção inválida.");
         }
+
+
+        scanner.close(); 
     }
 }

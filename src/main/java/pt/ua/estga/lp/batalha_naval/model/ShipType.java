@@ -9,15 +9,18 @@ public enum ShipType {
     CRUZADOR(3, "Cruzador"),
     COURACADO(4, "Couraçado"),
     PORTA_AVIOES(5, "Porta-Aviões");
-
+    
+    //Atributos
     private final int size;
     private final String name;
-
+    
+    //construtor
     ShipType(int size, String name) {
         this.size = size;
         this.name = name;
     }
-
+    
+    //getters
     public int getSize() {
         return size;
     }
@@ -26,7 +29,6 @@ public enum ShipType {
         return name;
     }
 
-    // rever
     @Override
     public String toString() {
         return name + " (" + size + " casas)";
