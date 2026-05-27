@@ -52,6 +52,8 @@ public class GUIView extends JFrame implements GameView {
             for (int j = 0; j < Board.SIZE; j++) {
                 JButton btn = new JButton();
                 btn.setBackground(Color.LIGHT_GRAY);
+                btn.setOpaque(true);
+                btn.setBorder(BorderFactory.createLineBorder(Color.GRAY));
                 int finalI = i;
                 int finalJ = j;
                 btn.addActionListener(e -> handleShotClick(finalI, finalJ));
